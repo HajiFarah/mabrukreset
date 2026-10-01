@@ -1,0 +1,1 @@
+Replace these with real 192×192 and 512×512 PNG icons.

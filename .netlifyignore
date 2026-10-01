@@ -1,0 +1,10 @@
+# Don't deploy these to Netlify
+.env
+.env.local
+.env.*.local
+node_modules/
+package.json
+package-lock.json
+supabase/
+.claude/
+README.md

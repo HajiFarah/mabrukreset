@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" fill="none">
+  <!-- Background -->
+  <rect width="192" height="192" rx="36" fill="#16a34a"/>
+  <!-- Shop awning stripe -->
+  <rect x="28" y="56" width="136" height="18" rx="4" fill="#15803d"/>
+  <rect x="28" y="56" width="22" height="18" fill="#dcfce7" opacity="0.5"/>
+  <rect x="72" y="56" width="22" height="18" fill="#dcfce7" opacity="0.5"/>
+  <rect x="116" y="56" width="22" height="18" fill="#dcfce7" opacity="0.5"/>
+  <!-- Shop front -->
+  <rect x="36" y="74" width="120" height="72" rx="4" fill="#14532d" opacity="0.5"/>
+  <!-- Door -->
+  <rect x="78" y="106" width="36" height="40" rx="4" fill="#052e16"/>
+  <circle cx="108" cy="126" r="3" fill="#4ade80"/>
+  <!-- Window left -->
+  <rect x="42" y="84" width="28" height="24" rx="3" fill="#bbf7d0" opacity="0.7"/>
+  <!-- Window right -->
+  <rect x="122" y="84" width="28" height="24" rx="3" fill="#bbf7d0" opacity="0.7"/>
+  <!-- Sign board -->
+  <rect x="52" y="38" width="88" height="20" rx="4" fill="#052e16"/>
+  <text x="96" y="53" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="#4ade80" text-anchor="middle" letter-spacing="1">MABRUK GS</text>
+</svg>
