@@ -1,4 +1,5 @@
-﻿CREATE OR REPLACE FUNCTION save_receipt(
+﻿-- Historical function snapshot; superseded by 20261001000001_sync_live_receipts_and_sales_deletion.sql.
+CREATE OR REPLACE FUNCTION save_receipt(
     p_supplier_name TEXT,
     p_receipt_date DATE,
     p_note TEXT,

@@ -225,10 +225,11 @@ export async function renderStockIn() {
   const app = document.getElementById('app');
   app.innerHTML = '<p>Loading…</p>';
 
-  const [{ data: suppliers, error: suppliersError }, { data: existingProducts }] = await Promise.all([
+  const [{ data: suppliers, error: suppliersError }, existingProductsResult] = await Promise.all([
     getSuppliers(),
     getProducts(),
   ]);
+  let existingProducts = existingProductsResult.data;
   if (suppliersError) {
     app.innerHTML = '<p class="error">Failed to load suppliers.</p>';
     return;
@@ -300,10 +301,21 @@ export async function renderStockIn() {
   // ── Existing product match ───────────────────────────────────────────────
 
   function findExisting(row) {
-    if (!row.name.trim() || !existingProducts) return null;
+    const normName = (s) => (s ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const normCat = (s) => (s ?? '').trim().toLowerCase();
+    const normUnit = (s) => (s ?? '').trim().toLowerCase() || null;
+    const normSize = (v) => (v === '' || v == null || Number.isNaN(Number(v))) ? null : Number(v);
+    const rowName = normName(row.name);
+    const rowCat = normCat(row.type);
+    if (!rowName || !existingProducts) return null;
+    if (row.size_value !== '' && row.size_value != null && Number.isNaN(Number(row.size_value))) return null;
+    const rowSize = normSize(row.size_value);
+    const rowUnit = normUnit(row.size_unit);
     return existingProducts.find((p) =>
-      p.name.toLowerCase() === row.name.trim().toLowerCase() &&
-      p.category === row.type
+      normName(p.name) === rowName &&
+      normCat(p.category) === rowCat &&
+      normSize(p.size_value) === rowSize &&
+      normUnit(p.size_unit) === rowUnit
     ) ?? null;
   }
 
@@ -319,7 +331,7 @@ export async function renderStockIn() {
         notice.className = 'row-existing-notice';
         tr.querySelector('.col-name').appendChild(notice);
       }
-      notice.textContent = `⟳ Already in stock (${numberDisplay(match.stock_qty)} ${stockUnit}) — will be combined. This supplier gets their own receipt.`;
+      notice.textContent = `Already in stock: ${numberDisplay(match.stock_qty)} ${stockUnit}; stock will be combined and this supplier gets their own receipt.`;
     } else if (notice) {
       notice.remove();
     }
@@ -611,6 +623,12 @@ export async function renderStockIn() {
       <p>${savedCount} item${savedCount > 1 ? 's' : ''} added to stock — total cost ${fmtKES(savedTotal)}</p>
       <a href="#/products">View products →</a>`;
     wrap.before(banner);
+    try {
+      const { data } = await getProducts();
+      if (data) existingProducts = data;
+    } catch {
+      // Keep the current match list if refreshing fails.
+    }
     window.setTimeout(() => banner.remove(), 8000);
   });
 

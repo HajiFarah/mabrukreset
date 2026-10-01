@@ -23,7 +23,7 @@ export async function getSupplierWithReceipts(id) {
 
   const { data: receipts, error: receiptsError } = await db
     .from('receipts')
-    .select('*, products(*)')
+    .select('*, receipt_items(*)')
     .eq('supplier_id', id)
     .order('receipt_date', { ascending: false });
 
@@ -31,6 +31,10 @@ export async function getSupplierWithReceipts(id) {
     console.error('[getSupplierWithReceipts] receipts', receiptsError);
     return { error: receiptsError };
   }
+
+  receipts?.forEach((receipt) => {
+    receipt.receipt_items?.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  });
 
   return { supplier, receipts };
 }

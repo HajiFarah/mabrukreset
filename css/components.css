@@ -56,7 +56,7 @@ input:not([type="radio"]):not([type="checkbox"]), select, textarea {
 textarea { height: auto; min-height: 72px; padding: 8px 10px; }
 input[type="radio"], input[type="checkbox"] { width: auto; accent-color: var(--acc); }
 input:focus, select:focus, textarea:focus { outline: 2px solid rgb(22 163 74 / 30%); border-color: var(--acc); }
-label { display: grid; min-width: 0; gap: 4px; color: var(--mute); font-size: 12px; font-weight: 600; }
+label { display: grid; min-width: 0; gap: 4px; color: var(--ink); font-size: 14px; font-weight: 700; }
 label input, label select { color: var(--ink); }
 fieldset { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); min-width: 0; margin: 0; padding: var(--s2); border: 1px solid var(--line); border-radius: var(--r-control); }
 legend { padding: 0 var(--s1); color: var(--mute); font-size: 12px; font-weight: 600; }
@@ -80,7 +80,7 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .row-credit-outstanding { background: #fff7ed; }
 .row-credit-outstanding:hover { background: #ffedd5; }
 .btn-sm { padding: 4px 10px; font-size: 13px; }
-.profit-positive, .diff-zero { color: var(--acc); }
+.profit-positive, .diff-zero { color: #15803d; }
 .profit-negative, .diff-negative { color: var(--bad); }
 .diff-positive { color: var(--amber); }
 .error, .inline-error, .stock-error { color: var(--bad); font-size: 14px; }
@@ -185,10 +185,12 @@ body.login-mode #app { display: grid; min-height: 100vh; place-items: center; pa
 .auto-field { background: var(--bg); color: var(--mute); cursor: default; font-style: italic; }
 
 /* Per-cell unit hint — shows type-specific label on desktop (e.g. "Sell/kg" inside a bag row) */
-.cell-hint { display: block; font-size: 10px; color: var(--mute); line-height: 1; margin-bottom: 2px; }
+.cell-hint { display: block; font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.2; margin-bottom: 3px; }
+.receipt-table .col-cost .cell-hint, .receipt-table .col-cost input,
+.receipt-table .col-cost-pc .cell-hint, .receipt-table .col-cost-pc input { color: var(--mute); }
 
 /* Profit */
-.profit-pos { color: #16a34a; font-weight: 600; font-size: 13px; }
+.profit-pos { color: #15803d; font-weight: 700; font-size: 13px; }
 .profit-neg { color: var(--bad); font-weight: 600; font-size: 13px; }
 
 /* Remove button */
@@ -304,7 +306,7 @@ body.login-mode #app { display: grid; min-height: 100vh; place-items: center; pa
 
 /* Checkout panel — vertical flow */
 .checkout-panel { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--card); padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
-.checkout-field-label { display: block; font-size: 11px; font-weight: 600; color: var(--mute); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.checkout-field-label { display: block; font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
 .checkout-pay-row { display: flex; flex-direction: column; gap: 4px; }
 .payment-methods { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r-control); }
 .payment-methods .btn { min-width: 76px; height: 30px; padding: 0 10px; font-size: 13px; }
@@ -364,6 +366,7 @@ body.login-mode #app { display: grid; min-height: 100vh; place-items: center; pa
 .history-sale-row:focus { outline: 2px solid var(--acc); outline-offset: -2px; }
 .badge-return { white-space: nowrap; }
 .sale-detail-totals p { margin: 0 0 var(--s1); }
+.sale-detail-totals .sale-detail-profit { font-weight: 700; }
 .return-management-modal td .btn { margin-right: 4px; }
 .replacement-results { display: grid; max-height: 180px; overflow-y: auto; }
 .replacement-option { justify-self: start; max-width: 100%; justify-content: flex-start; width: auto; height: 36px; min-width: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; text-align: left; }
@@ -423,7 +426,7 @@ body.login-mode #app { display: grid; min-height: 100vh; place-items: center; pa
   .receipt-table tbody tr.row-dup td { background: #fffbeb; box-shadow: none; }
   .receipt-table tbody tr.row-dup { outline: 2px solid #f59e0b; }
   .receipt-table td { padding: 0; border: none; display: block; }
-  .receipt-table td::before { display: block; content: attr(data-label); font-size: 10px; font-weight: 600; color: var(--mute); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+  .receipt-table td::before { display: block; content: attr(data-label); font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
   .cell-hint { display: none; }           /* data-label ::before already handles this on mobile */
   .col-dim { background: transparent; }  /* no shading in card view */
   .col-dim::before { display: none; }    /* no label for empty columns */

@@ -35,6 +35,22 @@ CREATE TABLE products (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS public.receipt_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    receipt_id UUID NOT NULL REFERENCES public.receipts(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES public.products(id) ON DELETE SET NULL,
+    product_name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    size_value NUMERIC,
+    size_unit VARCHAR(10),
+    qty NUMERIC NOT NULL,
+    cost_price NUMERIC,
+    sell_price NUMERIC,
+    carton_sell_price NUMERIC,
+    line_total NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE sales (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_name TEXT,
@@ -90,6 +106,19 @@ CREATE TABLE return_items (
     price_difference NUMERIC(12,2)
 );
 
+CREATE TABLE IF NOT EXISTS public.deleted_sales (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sale_id UUID NOT NULL,
+    deleted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_by UUID DEFAULT auth.uid(),
+    snapshot JSONB NOT NULL
+);
+ALTER TABLE public.deleted_sales ENABLE ROW LEVEL SECURITY;
+-- The live USING clause was not captured; "true" is assumed.
+DROP POLICY IF EXISTS deleted_sales_read ON public.deleted_sales;
+CREATE POLICY deleted_sales_read ON public.deleted_sales
+    FOR SELECT TO authenticated USING (true);
+
 CREATE TABLE day_closings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     closing_date DATE UNIQUE,
@@ -132,6 +161,8 @@ CREATE INDEX return_items_return_id_idx ON return_items (return_id);
 CREATE INDEX return_items_sale_item_id_idx ON return_items (sale_item_id);
 CREATE INDEX return_items_old_product_id_idx ON return_items (old_product_id);
 CREATE INDEX return_items_new_product_id_idx ON return_items (new_product_id);
+CREATE INDEX IF NOT EXISTS receipt_items_receipt_id_idx ON public.receipt_items (receipt_id);
+CREATE INDEX IF NOT EXISTS receipt_items_product_id_idx ON public.receipt_items (product_id);
 
 -- Case-insensitive product lookup and uniqueness by name/category/size.
 CREATE INDEX products_lower_name_idx ON products (lower(name));

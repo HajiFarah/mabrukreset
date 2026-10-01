@@ -1,4 +1,7 @@
 import { getSupplierWithReceipts } from '../services/suppliers.js';
+import { deleteReceipt } from '../services/products.js';
+import { openModal, closeModal } from '../components/modal.js';
+import { showToast } from '../components/toast.js';
 import { fmtKES } from '../utils.js';
 
 function escapeHtml(v) {
@@ -31,18 +34,18 @@ export async function renderSupplierDetail(id) {
   const receiptCount = receipts.length;
 
   const receiptCards = receipts.map((receipt) => {
-    const products = Array.isArray(receipt.products) ? receipt.products : [];
-    const rows = products.length
-      ? products.map((p) => {
-          const size = [p.size_value, p.size_unit].filter((v) => v !== null && v !== '').join(' ');
-          const lineTotal = Number(p.cost_price || 0) * Number(p.stock_qty || 0);
+    const items = Array.isArray(receipt.receipt_items) ? receipt.receipt_items : [];
+    const rows = items.length
+      ? items.map((item) => {
+          const size = [item.size_value, item.size_unit].filter((v) => v !== null && v !== '').join(' ');
+          const unit = item.category === 'bag' ? 'kg' : 'pcs';
           return `<tr>
-            <td>${escapeHtml(p.name)}</td>
-            <td>${escapeHtml(p.category || '—')}</td>
+            <td>${escapeHtml(item.product_name)}</td>
+            <td>${escapeHtml(item.category || '—')}</td>
             <td>${escapeHtml(size || '—')}</td>
-            <td>${escapeHtml(String(p.stock_qty ?? '—'))}</td>
-            <td>${fmtKES(p.cost_price)}</td>
-            <td>${fmtKES(lineTotal)}</td>
+            <td>${escapeHtml(String(item.qty ?? '—'))} ${unit}</td>
+            <td>${fmtKES(item.cost_price)}</td>
+            <td>${fmtKES(item.line_total)}</td>
           </tr>`;
         }).join('')
       : '<tr><td colspan="6" class="td-muted">No products on this receipt.</td></tr>';
@@ -54,6 +57,7 @@ export async function renderSupplierDetail(id) {
           ${receipt.note ? `<span class="sup-receipt-note">${escapeHtml(receipt.note)}</span>` : ''}
         </div>
         <span class="badge badge-green">${fmtKES(receipt.total_cost)}</span>
+        <button class="btn btn-red btn-sm" type="button" data-delete-receipt="${escapeHtml(receipt.id)}">Delete receipt</button>
       </div>
       <div class="table-scroll">
         <table class="data-table">
@@ -93,4 +97,42 @@ export async function renderSupplierDetail(id) {
         ${receipts.length ? receiptCards : '<p class="muted">No receipts recorded yet.</p>'}
       </div>
     </div>`;
+
+  const modalOverlay = document.getElementById('modal-overlay');
+  if (modalOverlay && !modalOverlay.dataset.closeButtonsBound) {
+    modalOverlay.addEventListener('click', (event) => {
+      if (event.target.closest('[data-modal-close]')) closeModal();
+    });
+    modalOverlay.dataset.closeButtonsBound = 'true';
+  }
+
+  app.querySelectorAll('[data-delete-receipt]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const receipt = receipts.find((item) => item.id === button.dataset.deleteReceipt);
+      if (!receipt) return;
+      openModal(`<div class="confirm-dialog">
+        <p>Delete this receipt? The stock it added will be subtracted. Products that also have stock from other suppliers will stay.</p>
+        <div class="modal-actions"><button class="btn btn-red" type="button" data-confirm-delete-supplier-receipt>Delete Receipt</button><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button></div>
+      </div>`);
+      document.querySelector('[data-confirm-delete-supplier-receipt]').addEventListener('click', async (event) => {
+        event.currentTarget.disabled = true;
+        const { data, error } = await deleteReceipt(receipt.id);
+        if (error) {
+          if (error.message?.toLowerCase().includes('sales history')) {
+            showToast('Cannot delete — product has sales history', 'error');
+          } else {
+            showToast(error.message || 'Failed to delete receipt', 'error');
+          }
+          closeModal();
+          return;
+        }
+        const deletedCount = Number(data || 0);
+        showToast(deletedCount === 0
+          ? 'Receipt deleted — stock reversed'
+          : `Receipt deleted — ${deletedCount} product${deletedCount === 1 ? '' : 's'} removed`);
+        closeModal();
+        await renderSupplierDetail(id);
+      });
+    });
+  });
 }

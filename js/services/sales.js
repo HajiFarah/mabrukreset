@@ -33,6 +33,12 @@ export async function getSaleById(id) {
   return result;
 }
 
+export async function deleteSale(saleId) {
+  const { error } = await db.rpc('delete_sale', { p_sale_id: saleId });
+  if (error) console.error('[deleteSale]', error);
+  return { error };
+}
+
 export async function processReturn(saleId, type, items, method) {
   const { data, error } = await db.rpc('process_return', {
     p_sale_id: saleId,

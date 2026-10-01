@@ -1,8 +1,9 @@
-import { getSales, getSaleById, processReturn } from '../services/sales.js';
+import { getSales, getSaleById, processReturn, deleteSale } from '../services/sales.js';
 import { settleCredit } from '../services/credits.js';
 import { getProducts } from '../services/products.js';
 import { openModal, closeModal } from '../components/modal.js';
 import { showToast } from '../components/toast.js';
+import { refreshBanner } from '../components/banner.js';
 import { fmtKES, today, dateRangeFor } from '../utils.js';
 
 function escapeHtml(value) {
@@ -83,6 +84,7 @@ export async function renderHistory() {
 
     const rows = sales.length ? sales.map((sale) => {
       const items = sale.sale_items ?? [];
+      const saleProfitAmount = saleProfit(sale);
       const summary = items.length
         ? `${escapeHtml(items[0].product_name || 'Product')}${items.length > 1 ? ` and ${items.length - 1} more` : ''}`
         : '—';
@@ -106,7 +108,7 @@ export async function renderHistory() {
         <td>${paymentMethod(sale)}</td>
         <td>${fmtKES(paid)}</td>
         <td>${balanceCell}</td>
-        <td>${fmtKES(saleProfit(sale))}</td>
+        <td class="${saleProfitAmount >= 0 ? 'profit-positive' : 'profit-negative'}">${fmtKES(saleProfitAmount)}</td>
         <td>${tags}</td>
       </tr>`;
     }).join('') : '<tr><td colspan="9">No sales found for this period.</td></tr>';
@@ -126,7 +128,7 @@ export async function renderHistory() {
       </div></div>
       <section class="history-kpis">
         <article class="card"><h2>Total Revenue</h2><p>${fmtKES(revenue)}</p></article>
-        <article class="card"><h2>Total Profit</h2><p>${fmtKES(profit)}</p></article>
+        <article class="card"><h2>Total Profit</h2><p class="${profit >= 0 ? 'profit-positive' : 'profit-negative'}">${fmtKES(profit)}</p></article>
         <article class="card"><h2>Sales Count</h2><p>${sales.length}</p></article>
         <article class="card history-top-products"><h2>Top 5 products</h2>${chart}</article>
       </section>
@@ -256,10 +258,42 @@ export async function renderHistory() {
         <p>Sale Total: ${fmtKES(sale.total)}</p>
         <p>Paid: ${fmtKES(sale.paid_cash)} cash + ${fmtKES(sale.paid_mpesa)} M-Pesa</p>
         <p>${Number(sale.balance || 0) < 0 ? `Change returned: ${fmtKES(Math.abs(Number(sale.balance)))}` : `Balance: ${fmtKES(sale.balance)}`}</p>
+        <p class="sale-detail-profit ${saleProfit(sale) >= 0 ? 'profit-positive' : 'profit-negative'}">Profit: ${fmtKES(saleProfit(sale))}</p>
       </div>
-      <div class="modal-actions"><button type="button" class="btn btn-green" id="open-return-management">Return Management</button><button type="button" class="btn btn-ghost" data-modal-close>Close</button></div>
+      <div class="modal-actions"><button type="button" class="btn btn-green" id="open-return-management">Return Management</button><button type="button" class="btn btn-red" id="open-delete-sale">Delete sale</button><button type="button" class="btn btn-ghost" data-modal-close>Close</button></div>
     </section>`);
     document.getElementById('open-return-management').addEventListener('click', () => openReturnManagement(sale));
+    document.getElementById('open-delete-sale').addEventListener('click', () => {
+      openModal(`<div class="confirm-dialog">
+        <p>Delete this sale? A snapshot will be archived, stock will be restored, and the sale's items, returns, and credit payments will be removed. This cannot be undone.</p>
+        <div class="modal-actions"><button type="button" class="btn btn-red" id="confirm-delete-sale">Delete sale</button><button type="button" class="btn btn-ghost" id="cancel-delete-sale" data-modal-close>Cancel</button></div>
+      </div>`);
+      const confirmButton = document.getElementById('confirm-delete-sale');
+      const cancelButton = document.getElementById('cancel-delete-sale');
+      confirmButton.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        cancelButton.disabled = true;
+        button.textContent = 'Deleting...';
+        let deleteError;
+        try {
+          ({ error: deleteError } = await deleteSale(sale.id));
+        } catch (error) {
+          deleteError = error;
+        }
+        if (deleteError) {
+          showToast(deleteError.message || 'Could not delete sale', 'error');
+          button.disabled = false;
+          cancelButton.disabled = false;
+          button.textContent = 'Delete sale';
+          return;
+        }
+        closeModal();
+        showToast('Sale deleted and stock restored');
+        await refreshBanner();
+        await loadSales();
+      });
+    });
   }
 
   async function openReturnManagement(sale) {

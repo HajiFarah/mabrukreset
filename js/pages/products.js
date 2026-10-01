@@ -281,7 +281,7 @@ export async function renderProducts() {
 
     if (button.dataset.action === 'delete') {
       openModal(`<div class="confirm-dialog">
-        <p>Delete ${escapeHtml(product.name)}? This cannot be undone.</p>
+        <p>Delete ${escapeHtml(product.name)}? Supplier receipts stay as history. This cannot be undone.</p>
         <div class="modal-actions"><button class="btn btn-red" type="button" data-confirm-delete>Delete</button><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button></div>
       </div>`);
       document.querySelector('[data-confirm-delete]').addEventListener('click', async () => {
@@ -310,10 +310,11 @@ export async function renderProducts() {
         return;
       }
       openModal(`<div class="confirm-dialog">
-        <p>Delete all products from this receipt? This will remove all items received on ${escapeHtml(product.created_at?.slice(0, 10) || 'this date')}.</p>
+        <p>Delete this receipt? The stock it added will be subtracted. Products that also have stock from other suppliers will stay.</p>
         <div class="modal-actions"><button class="btn btn-red" type="button" data-confirm-delete-receipt>Delete Receipt</button><button class="btn btn-ghost" type="button" data-modal-close>Cancel</button></div>
       </div>`);
-      document.querySelector('[data-confirm-delete-receipt]').addEventListener('click', async () => {
+      document.querySelector('[data-confirm-delete-receipt]').addEventListener('click', async (event) => {
+        event.currentTarget.disabled = true;
         const { data, error } = await deleteReceipt(product.receipt_id);
         if (error) {
           if (error.message?.toLowerCase().includes('sales history')) {
@@ -324,12 +325,23 @@ export async function renderProducts() {
           closeModal();
           return;
         }
-        const removedReceiptId = product.receipt_id;
-        for (let index = products.length - 1; index >= 0; index -= 1) {
-          if (products[index].receipt_id === removedReceiptId) products.splice(index, 1);
-        }
-        showToast(`Receipt deleted — ${Number(data || 0)} products removed`);
+
+        const deletedCount = Number(data || 0);
+        showToast(deletedCount === 0
+          ? 'Receipt deleted — stock reversed'
+          : `Receipt deleted — ${deletedCount} product${deletedCount === 1 ? '' : 's'} removed`);
         closeModal();
+        try {
+          const [productsReload, suppliersReload] = await Promise.all([getProducts(), getSuppliers()]);
+          if (productsReload.error) throw productsReload.error;
+          products.splice(0, products.length, ...(productsReload.data ?? []));
+          if (!suppliersReload.error) {
+            supplierNames.clear();
+            (suppliersReload.data ?? []).forEach((supplier) => supplierNames.set(supplier.id, supplier.name));
+          }
+        } catch {
+          // Keep the successful deletion toast visible if the reload fails.
+        }
         applyFilters();
       });
     }
