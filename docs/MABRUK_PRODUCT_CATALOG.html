@@ -1,0 +1,3874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mabruk Shop — Master Product Catalog</title>
+<style>
+  /* ── Reset ────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Page shell ───────────────────────────────────── */
+  body {
+    font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #1c1c1c;
+    background: #e8e4dd;
+  }
+
+  .layout {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ──────────────────────────────────────── */
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: #1a1a1a;
+    color: #ccc;
+    padding: 28px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #c9912b;
+    padding: 0 22px 14px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 10px;
+  }
+
+  .sidebar a {
+    display: block;
+    padding: 6px 22px;
+    font-size: 13px;
+    color: #b0b0b0;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    line-height: 1.4;
+    transition: all 0.12s;
+  }
+
+  .sidebar a:hover {
+    color: #fff;
+    border-left-color: #c9912b;
+    background: rgba(201,145,43,0.1);
+  }
+
+  .sidebar a.flag-link { color: #d98080; }
+  .sidebar a.flag-link:hover {
+    color: #ffaaaa;
+    border-left-color: #c0392b;
+    background: rgba(192,57,43,0.1);
+  }
+
+  .sidebar-divider {
+    border: none;
+    border-top: 1px solid #2d2d2d;
+    margin: 8px 22px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: #111; }
+  .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+  /* ── Main content ─────────────────────────────────── */
+  .main {
+    flex: 1;
+    min-width: 0;
+    background: #fff;
+    /* Constrain content width so it doesn't stretch edge-to-edge */
+    padding: 56px 72px;
+  }
+
+  /* Inner content max-width for comfortable reading */
+  .main > * {
+    max-width: 860px;
+  }
+
+  /* Tables get a bit more room */
+  .main > table,
+  .main > blockquote {
+    max-width: 100%;
+  }
+
+  /* ── Typography ───────────────────────────────────── */
+  h1 {
+    font-size: 30px;
+    font-weight: 800;
+    color: #1a1a1a;
+    letter-spacing: -0.02em;
+    border-bottom: 4px solid #c9912b;
+    padding-bottom: 16px;
+    margin-bottom: 8px;
+    max-width: 100%;
+  }
+
+  /* Meta info lines after h1 */
+  h1 ~ p:not(h2 ~ p):not(h3 ~ p) {
+    font-size: 13.5px;
+    color: #666;
+    margin-bottom: 4px;
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #8a6010;
+    margin-top: 52px;
+    margin-bottom: 16px;
+    padding: 12px 18px;
+    background: #fdf8ee;
+    border-left: 5px solid #c9912b;
+    border-radius: 0 5px 5px 0;
+    max-width: 100%;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #555;
+    margin-top: 28px;
+    margin-bottom: 12px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #d8d3c8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    max-width: 100%;
+  }
+
+  h3[id*="flag"] {
+    color: #a93226;
+    border-bottom-color: #f1b0a8;
+  }
+
+  h2#flags--issues-to-resolve-before-seeding {
+    color: #922b21;
+    background: #fdf0ef;
+    border-left-color: #c0392b;
+  }
+
+  p {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: #333;
+  }
+
+  strong { color: #111; }
+  a { color: #c9912b; }
+
+  /* ── Tables ───────────────────────────────────────── */
+  table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 28px;
+    font-size: 13.5px;
+    border: 1px solid #dedad1;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  thead tr {
+    background: #252525;
+    color: #f0f0f0;
+  }
+
+  thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border-right: 1px solid #3a3a3a;
+  }
+
+  thead th:last-child { border-right: none; }
+
+  tbody tr:nth-child(even) { background: #faf9f5; }
+  tbody tr:hover { background: #fef5e0; transition: background 0.1s; }
+
+  tbody td {
+    padding: 8px 14px;
+    border-bottom: 1px solid #ecea e2;
+    border-right: 1px solid #f0ede5;
+    vertical-align: top;
+    color: #2a2a2a;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+
+  tbody td:last-child {
+    border-right: none;
+    color: #666;
+    font-size: 13px;
+  }
+
+  /* Cost/price column (4th col) */
+  tbody td:nth-child(4) {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #1a5c1a;
+    white-space: nowrap;
+  }
+
+  /* ── Blockquotes ──────────────────────────────────── */
+  blockquote {
+    border-left: 5px solid #c9912b;
+    margin: 16px 0;
+    padding: 12px 18px;
+    background: #fffaf2;
+    border-radius: 0 5px 5px 0;
+    max-width: 100%;
+  }
+
+  blockquote p {
+    margin: 0;
+    font-size: 14px;
+    color: #7a4d00;
+    line-height: 1.6;
+  }
+
+  /* Warning blockquotes */
+  blockquote:has(p) {
+    border-left-color: #c0392b;
+    background: #fdf3f2;
+  }
+
+  blockquote p { color: #922b21; font-weight: 500; }
+
+  /* ── Lists ────────────────────────────────────────── */
+  ul, ol {
+    margin: 10px 0 16px 26px;
+  }
+
+  li {
+    margin-bottom: 6px;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Code ─────────────────────────────────────────── */
+  code {
+    background: #f0ede5;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Cascadia Code', monospace;
+    font-size: 13px;
+    color: #5a3e00;
+  }
+
+  /* ── Dividers ─────────────────────────────────────── */
+  hr {
+    border: none;
+    border-top: 1px solid #e5e1d8;
+    margin: 40px 0;
+    max-width: 100%;
+  }
+
+  /* ── Print ────────────────────────────────────────── */
+  @media print {
+    .sidebar { display: none; }
+    .main { padding: 24px 36px; }
+    .main > * { max-width: 100%; }
+    body { background: #fff; font-size: 12px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 15px; margin-top: 20px; padding: 8px 12px; page-break-after: avoid; }
+    h3 { font-size: 12px; page-break-after: avoid; }
+    table { font-size: 11px; page-break-inside: auto; }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; }
+    .layout { display: block; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="sidebar-title">Mabruk Catalog</div>
+    <a href="#mabruk-shop--master-product-catalog">Overview</a>
+    <a href="#summary">Summary</a>
+    <a href="#supplier-directory">Suppliers</a>
+    <hr class="sidebar-divider">
+    <a href="#section-1-spices--seasonings">1. Spices</a>
+    <a href="#section-2-flours-grains--pasta">2. Flours &amp; Pasta</a>
+    <a href="#section-3-rice">3. Rice</a>
+    <a href="#section-4-sugar--baking">4. Sugar &amp; Baking</a>
+    <a href="#section-5-cooking-oils--fats">5. Oils &amp; Fats</a>
+    <a href="#section-6-dairy--milk">6. Dairy &amp; Milk</a>
+    <a href="#section-7-beverages--juices">7. Juices</a>
+    <a href="#section-8-beverages--sodas">8. Sodas</a>
+    <a href="#section-9-water">9. Water</a>
+    <a href="#section-10-tea--coffee">10. Tea &amp; Coffee</a>
+    <a href="#section-11-breakfast-cereals">11. Cereals</a>
+    <a href="#section-12-condiments--sauces">12. Condiments</a>
+    <a href="#section-13-canned--preserved-foods">13. Canned Foods</a>
+    <a href="#section-14-snacks-biscuits--confectionery">14. Snacks</a>
+    <a href="#section-15-pulses--legumes">15. Pulses</a>
+    <a href="#section-16-salt">16. Salt</a>
+    <a href="#section-17-personal-care--soaps">17. Soaps</a>
+    <a href="#section-18-personal-care--shampoos-hair--body">18. Shampoos &amp; Hair</a>
+    <a href="#section-19-oral-care">19. Oral Care</a>
+    <a href="#section-20-cleaning-products">20. Cleaning</a>
+    <a href="#section-21-sanitary--paper-products">21. Sanitary &amp; Paper</a>
+    <a href="#section-22-air-fresheners--household">22. Air Fresheners</a>
+    <a href="#section-23-batteries">23. Batteries</a>
+    <a href="#section-24-personal-grooming">24. Grooming</a>
+    <a href="#section-25-electronics-non-grocery">25. Electronics</a>
+    <a href="#section-26-miscellaneous--needs-verification">26. Misc / Verify</a>
+    <hr class="sidebar-divider">
+    <a href="#flags--issues-to-resolve-before-seeding" class="flag-link">⚠ All Flags</a>
+    <a href="#flag-1-voided-items--do-not-seed-as-stock-received" class="flag-link">Flag 1: Voided</a>
+    <a href="#flag-2-unpaid-invoice--supersanta-hub-supply" class="flag-link">Flag 2: Unpaid</a>
+    <a href="#flag-3-duplicate-receipt-images--count-only-once-per-event" class="flag-link">Flag 3: Duplicates</a>
+    <a href="#flag-4-price-discrepancies--verify-against-paper-originals" class="flag-link">Flag 4: Prices</a>
+    <a href="#flag-5-customer-name-discrepancies-on-receipts" class="flag-link">Flag 5: Names</a>
+    <a href="#flag-6-blurry--unreadable-items" class="flag-link">Flag 6: Blurry</a>
+    <a href="#flag-7-items-requiring-product-category-confirmation" class="flag-link">Flag 7: Categories</a>
+  </nav>
+
+  <main class="main">
+    <h1>Mabruk Shop — Master Product Catalog</h1>
+<p><strong>Generated:</strong> 03-Oct-2026
+<strong>Sources:</strong> 1 structured PDF (<code>stock_seed_document.pdf</code>, 219 lines, 10 receipts) + 62 receipt images (WA0002–WA0063)
+<strong>Unique purchase events:</strong> ~35 distinct receipts (after deduplication)
+<strong>Total suppliers:</strong> 20
+<strong>Status:</strong> DOCUMENTATION ONLY — not yet seeded into system</p>
+<hr>
+<h2>Summary</h2>
+<h3>Product Count by Section</h3>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Category</th>
+<th>SKUs</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Spices &amp; Seasonings</td>
+<td>25</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Flours, Grains &amp; Pasta</td>
+<td>14</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Rice</td>
+<td>7</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Sugar &amp; Baking</td>
+<td>8</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Cooking Oils &amp; Fats</td>
+<td>17</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Dairy &amp; Milk</td>
+<td>12</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Beverages — Juices</td>
+<td>25</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Beverages — Sodas</td>
+<td>6</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Water</td>
+<td>7</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Tea &amp; Coffee</td>
+<td>8</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Breakfast Cereals</td>
+<td>3</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Condiments &amp; Sauces</td>
+<td>20</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Canned &amp; Preserved Foods</td>
+<td>7</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Snacks, Biscuits &amp; Confectionery</td>
+<td>27</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Pulses &amp; Legumes</td>
+<td>3</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Salt &amp; Starch</td>
+<td>7</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Personal Care — Soaps</td>
+<td>11</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Personal Care — Shampoos, Hair &amp; Body</td>
+<td>22</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Oral Care</td>
+<td>6</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Cleaning Products</td>
+<td>17</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Sanitary &amp; Paper Products</td>
+<td>14</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Air Fresheners &amp; Household</td>
+<td>6</td>
+</tr>
+<tr>
+<td>23</td>
+<td>Batteries</td>
+<td>2</td>
+</tr>
+<tr>
+<td>24</td>
+<td>Personal Grooming</td>
+<td>2</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Electronics (Non-Grocery)</td>
+<td>6</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Miscellaneous / Needs Verification</td>
+<td>4</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>TOTAL</strong></td>
+<td><strong>~325</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Note: A small number of items appear in two sections (e.g. Gilda Beans in both Canned Foods and Pulses; White Wash in both Soaps and Cleaning). These are cross-listed for reference — count each as one SKU.</p>
+</blockquote>
+<hr>
+<h3>Spend by Receipt (PDF source — verified totals)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Receipt</th>
+<th>Supplier</th>
+<th>Date</th>
+<th>Total (KES)</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>#0676552</td>
+<td>Kulmis Spices</td>
+<td>18-Aug-2026</td>
+<td>43,840</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td>#0008578</td>
+<td>Tawakall General Stores Ltd</td>
+<td>14-Aug-2026</td>
+<td>1,620</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>#0038506</td>
+<td>G-Wholesalers</td>
+<td>17-Aug-2026</td>
+<td>2,240</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>#0000606</td>
+<td>Tawakall General Stores Ltd</td>
+<td>14-Aug-2026</td>
+<td>−3,900</td>
+<td>Credit note (return)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>#0441957</td>
+<td>Mire Shop Bacadow No 3</td>
+<td>05-Aug-2026</td>
+<td>4,700</td>
+<td></td>
+</tr>
+<tr>
+<td>6</td>
+<td>#0008280</td>
+<td>Tawakall General Stores Ltd</td>
+<td>12-Aug-2026</td>
+<td>71,900</td>
+<td>2 lines voided (matched by credit note)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>#0007147</td>
+<td>Tawakall General Stores Ltd</td>
+<td>14-Aug-2026</td>
+<td>75,650</td>
+<td>1 line voided; date uncertain (see Flag 4)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>#0038473</td>
+<td>G-Wholesalers</td>
+<td>16-Aug-2026</td>
+<td>47,700</td>
+<td></td>
+</tr>
+<tr>
+<td>9</td>
+<td>#0038476</td>
+<td>G-Wholesalers</td>
+<td>16-Aug-2026</td>
+<td>750</td>
+<td></td>
+</tr>
+<tr>
+<td>10</td>
+<td>#0006728</td>
+<td>Tawakall General Stores Ltd</td>
+<td>14-Aug-2026</td>
+<td>300,060</td>
+<td>KES 300,000 printed; KES 60 gap (see Flag 4)</td>
+</tr>
+<tr>
+<td>—</td>
+<td>—</td>
+<td><strong>PDF receipts net total</strong></td>
+<td>—</td>
+<td><strong>KES 544,560</strong></td>
+<td></td>
+</tr>
+</tbody></table>
+<h3>Image-Only Receipts (totals not verified line-by-line)</h3>
+<p>Receipts extracted from images only (not in PDF). Line items are catalogued above but receipt grand totals were not individually tallied.</p>
+<table>
+<thead>
+<tr>
+<th>Supplier</th>
+<th>Receipt #</th>
+<th>Source Images</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Gorgor Foodstuffs Ltd</td>
+<td>#0202733</td>
+<td>WA0008, WA0012</td>
+</tr>
+<tr>
+<td>Tawakall General Stores Ltd</td>
+<td>#0014370</td>
+<td>WA0014, WA0017</td>
+</tr>
+<tr>
+<td>Salamatwo Wholesalers Ltd</td>
+<td>#0799182</td>
+<td>WA0015, WA0023</td>
+</tr>
+<tr>
+<td>Best Size General Trading Ltd</td>
+<td>—</td>
+<td>WA0016, WA0022</td>
+</tr>
+<tr>
+<td>Kulmis Spices (Pop Corn)</td>
+<td>#0679628</td>
+<td>WA0038, WA0039</td>
+</tr>
+<tr>
+<td>MUKAMii Wholesalers Ltd</td>
+<td>#0136130</td>
+<td>WA0041, WA0042</td>
+</tr>
+<tr>
+<td>Amana General Store</td>
+<td>—</td>
+<td>WA0004</td>
+</tr>
+<tr>
+<td>Eastline General Supplies Ltd</td>
+<td>—</td>
+<td>WA0003, WA0005, WA0006</td>
+</tr>
+<tr>
+<td>Bushra Wholesalers Ltd</td>
+<td>—</td>
+<td>WA0007</td>
+</tr>
+<tr>
+<td>Better Deal Wholesalers Ltd</td>
+<td>—</td>
+<td>WA0009, WA0010, WA0011</td>
+</tr>
+<tr>
+<td>Gorgor Wholesalers Ltd</td>
+<td>#0180258</td>
+<td>WA0054, WA0057 (customer &quot;royalmol&quot; — see Flag 5)</td>
+</tr>
+<tr>
+<td>Lukman Wholesalers Ltd</td>
+<td>—</td>
+<td>WA0013</td>
+</tr>
+<tr>
+<td>Supersanta Hub Supply</td>
+<td>—</td>
+<td>WA0020</td>
+</tr>
+<tr>
+<td>Bahati Superstar Ltd</td>
+<td>—</td>
+<td>WA0024</td>
+</tr>
+<tr>
+<td>Ukamil Wholesalers Ltd</td>
+<td>—</td>
+<td>WA0025</td>
+</tr>
+<tr>
+<td>Kulan Wholesalers Ltd</td>
+<td>—</td>
+<td>WA0027</td>
+</tr>
+<tr>
+<td>MK Electronics</td>
+<td>—</td>
+<td>WA0029</td>
+</tr>
+<tr>
+<td>Brookside Dairy Ltd</td>
+<td>—</td>
+<td>WA0035 (handwritten slip — legibility poor)</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#supplier-directory">Supplier Directory</a></li>
+<li><a href="#section-1-spices--seasonings">Section 1: Spices &amp; Seasonings</a></li>
+<li><a href="#section-2-flours-grains--pasta">Section 2: Flours, Grains &amp; Pasta</a></li>
+<li><a href="#section-3-rice">Section 3: Rice</a></li>
+<li><a href="#section-4-sugar--baking">Section 4: Sugar &amp; Baking</a></li>
+<li><a href="#section-5-cooking-oils--fats">Section 5: Cooking Oils &amp; Fats</a></li>
+<li><a href="#section-6-dairy--milk">Section 6: Dairy &amp; Milk</a></li>
+<li><a href="#section-7-beverages--juices">Section 7: Beverages — Juices</a></li>
+<li><a href="#section-8-beverages--sodas">Section 8: Beverages — Sodas</a></li>
+<li><a href="#section-9-water">Section 9: Water</a></li>
+<li><a href="#section-10-tea--coffee">Section 10: Tea &amp; Coffee</a></li>
+<li><a href="#section-11-breakfast-cereals">Section 11: Breakfast Cereals</a></li>
+<li><a href="#section-12-condiments--sauces">Section 12: Condiments &amp; Sauces</a></li>
+<li><a href="#section-13-canned--preserved-foods">Section 13: Canned &amp; Preserved Foods</a></li>
+<li><a href="#section-14-snacks-biscuits--confectionery">Section 14: Snacks, Biscuits &amp; Confectionery</a></li>
+<li><a href="#section-15-pulses--legumes">Section 15: Pulses &amp; Legumes</a></li>
+<li><a href="#section-16-salt">Section 16: Salt</a></li>
+<li><a href="#section-17-personal-care--soaps">Section 17: Personal Care — Soaps</a></li>
+<li><a href="#section-18-personal-care--shampoos--hair">Section 18: Personal Care — Shampoos &amp; Hair</a></li>
+<li><a href="#section-19-oral-care">Section 19: Oral Care</a></li>
+<li><a href="#section-20-cleaning-products">Section 20: Cleaning Products</a></li>
+<li><a href="#section-21-sanitary--paper-products">Section 21: Sanitary &amp; Paper Products</a></li>
+<li><a href="#section-22-air-fresheners--household">Section 22: Air Fresheners &amp; Household</a></li>
+<li><a href="#section-23-batteries">Section 23: Batteries</a></li>
+<li><a href="#section-24-personal-grooming">Section 24: Personal Grooming</a></li>
+<li><a href="#section-25-electronics-non-grocery">Section 25: Electronics (Non-Grocery)</a></li>
+<li><a href="#section-26-miscellaneous--needs-verification">Section 26: Miscellaneous / Needs Verification</a></li>
+<li><a href="#flags--issues-to-resolve-before-seeding">Flags &amp; Issues to Resolve Before Seeding</a></li>
+</ol>
+<hr>
+<h2>Supplier Directory</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Supplier Name</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Kulmis Spices</td>
+<td>12th Street, KBS Garage</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Tawakall General Stores Ltd</td>
+<td>Jam Street, Eastleigh</td>
+</tr>
+<tr>
+<td>3</td>
+<td>G-Wholesalers</td>
+<td>—</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Mire Shop Bacadow No 3</td>
+<td>—</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Better Deal Wholesalers Ltd</td>
+<td>14th Street, Nairobi</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Bushra Wholesalers Ltd</td>
+<td>14th Street, Eastleigh</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Amana General Store</td>
+<td>Jam Street, Eastleigh</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Eastline General Supplies Ltd</td>
+<td>—</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Gorgor Foodstuffs Limited</td>
+<td>Jam Street, Eastleigh</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Gorgor Wholesalers Ltd</td>
+<td>Jam Street Opp Atlas</td>
+</tr>
+<tr>
+<td>11</td>
+<td>MK Electronics</td>
+<td>Yare Towers, Eastleigh</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Salamatwo Wholesalers Ltd</td>
+<td>14th Street, Eastleigh</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Best Size General Trading Ltd</td>
+<td>15th Street, Eastleigh</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Ukamil Wholesalers Ltd</td>
+<td>14th Street, Eastleigh</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Lukman Wholesalers Ltd</td>
+<td>—</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Supersanta Hub Supply</td>
+<td>—</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Bahati Superstar Ltd</td>
+<td>—</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Brookside Dairy Ltd</td>
+<td>—</td>
+</tr>
+<tr>
+<td>19</td>
+<td>MUKAMii Wholesalers Ltd</td>
+<td>14th Street, Eastleigh</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Kulan Wholesalers Ltd</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 1: Spices &amp; Seasonings</h2>
+<h3>1A — Bulk / Loose (sold per kg)</h3>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yellow Beans</td>
+<td>5kg lot</td>
+<td>per kg</td>
+<td>130/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Cardamom Whole</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>1,950/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Green Cardamom</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>3,400/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Ginger Ethio</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>500/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Ginger TZ</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>650/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Cinnamon Stick</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>400/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Black Pepper Whole</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>1,050/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Cloves Whole</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>900/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Sorghum</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>180/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Wheat</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>100/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Digir Somali</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>100/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>White Maize</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>100/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Cumin Seeds G1</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>650/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Dhania Whole</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>350/kg</td>
+<td>Kulmis Spices</td>
+<td></td>
+</tr>
+<tr>
+<td>Pop Corn</td>
+<td>per pc/unit</td>
+<td>individual units</td>
+<td>200/pc</td>
+<td>Kulmis Spices</td>
+<td>10 units bought</td>
+</tr>
+</tbody></table>
+<h3>1B — Packaged Spices &amp; Masala (pieces/carton)</h3>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tea Masala</td>
+<td>100g</td>
+<td>12/carton</td>
+<td>150/pc</td>
+<td>Tawakall</td>
+<td></td>
+</tr>
+<tr>
+<td>Paprika Masala</td>
+<td>100g</td>
+<td>18/carton</td>
+<td>155/pc</td>
+<td>Tawakall</td>
+<td></td>
+</tr>
+<tr>
+<td>Pilau Masala</td>
+<td>—</td>
+<td>per pc</td>
+<td>155/pc</td>
+<td>Tawakall</td>
+<td></td>
+</tr>
+<tr>
+<td>Ginger 100G</td>
+<td>100g</td>
+<td>per pc</td>
+<td>150/pc</td>
+<td>Tawakall</td>
+<td></td>
+</tr>
+<tr>
+<td>Cinnamon</td>
+<td>100g</td>
+<td>12/carton</td>
+<td>150/pc</td>
+<td>Tawakall</td>
+<td></td>
+</tr>
+<tr>
+<td>Turmeric Powder</td>
+<td>—</td>
+<td>per pc</td>
+<td>150/pc</td>
+<td>Tawakall</td>
+<td></td>
+</tr>
+<tr>
+<td>Curr/Curry Powder</td>
+<td>10g sachets</td>
+<td>8x36x10g/carton</td>
+<td>1,100/carton</td>
+<td>Tawakall</td>
+<td></td>
+</tr>
+<tr>
+<td>Tuma Paprika Powder</td>
+<td>—</td>
+<td>per pc</td>
+<td>180/pc</td>
+<td>MUKAMii Wholesalers</td>
+<td>6 units bought</td>
+</tr>
+<tr>
+<td>Candid Pilau Masala</td>
+<td>100g</td>
+<td>per pc</td>
+<td>200/pc</td>
+<td>MUKAMii Wholesalers</td>
+<td>6 units bought</td>
+</tr>
+<tr>
+<td>Candid Chicken Masala</td>
+<td>100g</td>
+<td>per pc</td>
+<td>150/pc</td>
+<td>MUKAMii Wholesalers</td>
+<td>6 units bought</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 2: Flours, Grains &amp; Pasta</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ajab Ngano (Wheat Flour)</td>
+<td>1KG</td>
+<td>24/bale</td>
+<td>1,980/bale</td>
+<td>Tawakall</td>
+<td>Code: 000003978</td>
+</tr>
+<tr>
+<td>Ajab Ngano (Wheat Flour)</td>
+<td>500G</td>
+<td>24/bale</td>
+<td>1,000–1,100/bale</td>
+<td>Tawakall</td>
+<td>Code: 000004093</td>
+</tr>
+<tr>
+<td>Ajab Ngano</td>
+<td>500G</td>
+<td>per pc</td>
+<td>1,080/pc</td>
+<td>Better Deal</td>
+<td></td>
+</tr>
+<tr>
+<td>Ajab Mobile</td>
+<td>500G</td>
+<td>per pc</td>
+<td>1,050/pc</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Ajab</td>
+<td>1KG bag</td>
+<td>per bag</td>
+<td>2,100/bag</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Pembe Ugali</td>
+<td>1KG</td>
+<td>per bale</td>
+<td>1,730/bale</td>
+<td>Lukman Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Raha Ugali</td>
+<td>1KG</td>
+<td>24/bale</td>
+<td>2,270/bale</td>
+<td>Tawakall</td>
+<td>Code: 000014369</td>
+</tr>
+<tr>
+<td>Atta Mark</td>
+<td>1KG</td>
+<td>24/bale</td>
+<td>3,050/bale</td>
+<td>Tawakall</td>
+<td>Code: 000004514</td>
+</tr>
+<tr>
+<td>Cracked Wheat Saren</td>
+<td>1KG</td>
+<td>20/carton</td>
+<td>185/pc</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Yumis (Uji/Porridge Flour)</td>
+<td>500G</td>
+<td>20/carton</td>
+<td>5,800/carton</td>
+<td>Tawakall</td>
+<td>Code: 000003680</td>
+</tr>
+<tr>
+<td>Najah Uji</td>
+<td>2KG</td>
+<td>6/carton</td>
+<td>8,500/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005176</td>
+</tr>
+<tr>
+<td>Mutlu Spaghetti</td>
+<td>500G</td>
+<td>20/carton</td>
+<td>2,350/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014717</td>
+</tr>
+<tr>
+<td>Turk Spaghetti</td>
+<td>500G</td>
+<td>20/carton</td>
+<td>2,300/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014711</td>
+</tr>
+<tr>
+<td>Golda Macaroni Elbow</td>
+<td>500G</td>
+<td>20/carton</td>
+<td>1,900/carton</td>
+<td>Tawakall</td>
+<td>Code: 000008691</td>
+</tr>
+<tr>
+<td>Golda Macaroni Spaghetti</td>
+<td>500G</td>
+<td>20/carton</td>
+<td>1,900/carton</td>
+<td>Tawakall</td>
+<td>Code: 000008690</td>
+</tr>
+<tr>
+<td>Rosalinda Macaroni</td>
+<td>500G</td>
+<td>per bale</td>
+<td>1,930/bale</td>
+<td>Lukman Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Rosalinda Spaghetti</td>
+<td>500G</td>
+<td>20/carton</td>
+<td>2,350–2,380/carton</td>
+<td>Lukman Wholesalers; Gorgor Foodstuffs</td>
+<td>Price varies by supplier</td>
+</tr>
+<tr>
+<td>Akhan Spaghetti</td>
+<td>500G</td>
+<td>per carton</td>
+<td>2,400/carton</td>
+<td>Kulan Wholesalers</td>
+<td>3 cartons bought</td>
+</tr>
+<tr>
+<td>Indomie Chicken</td>
+<td>120G</td>
+<td>20/carton</td>
+<td>730–750/carton</td>
+<td>Bushra; G-Wholesalers; Gorgor Foodstuffs</td>
+<td>Code: 000001414</td>
+</tr>
+<tr>
+<td>Indomie Chicken Jumbo</td>
+<td>—</td>
+<td>per carton</td>
+<td>740/carton</td>
+<td>Better Deal</td>
+<td></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 3: Rice</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sahal Rice</td>
+<td>25KG</td>
+<td>per bag</td>
+<td>4,050/bag</td>
+<td>Tawakall</td>
+<td>Code: 1001523</td>
+</tr>
+<tr>
+<td>Sahal Rice</td>
+<td>5KG</td>
+<td>8/bag</td>
+<td>6,400/bag</td>
+<td>Tawakall</td>
+<td>Code: 000005376; 0.5 bag bought</td>
+</tr>
+<tr>
+<td>Hamza Rice</td>
+<td>25KG</td>
+<td>per bag</td>
+<td>4,250/bag</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Ahlan Rice</td>
+<td>25KG</td>
+<td>per bag</td>
+<td>4,150/bag</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Mahir Rice</td>
+<td>25KG</td>
+<td>per bag</td>
+<td>3,950/bag</td>
+<td>Gorgor Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Yabal Rice</td>
+<td>25KG</td>
+<td>per bag</td>
+<td>3,850/bag</td>
+<td>Kulan Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Munir Rice</td>
+<td>25KG</td>
+<td>per bag</td>
+<td>4,300/bag</td>
+<td>Kulan Wholesalers</td>
+<td></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 4: Sugar &amp; Baking</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sugar Brown</td>
+<td>50KG</td>
+<td>per bag</td>
+<td>6,180–6,450/bag</td>
+<td>Tawakall</td>
+<td>Code: 000004210; price variation across purchases</td>
+</tr>
+<tr>
+<td>Baking Powder</td>
+<td>100G</td>
+<td>72/dozen</td>
+<td>360/dozen</td>
+<td>Tawakall</td>
+<td>Code: 1000731</td>
+</tr>
+<tr>
+<td>Magest Yeast</td>
+<td>90G</td>
+<td>60/carton</td>
+<td>80/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014124</td>
+</tr>
+<tr>
+<td>King Instant Dry Yeast</td>
+<td>—</td>
+<td>per carton</td>
+<td>4,150/carton</td>
+<td>Better Deal</td>
+<td></td>
+</tr>
+<tr>
+<td>Vanilla Power</td>
+<td>—</td>
+<td>per packet</td>
+<td>140/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004899; 5 packets bought</td>
+</tr>
+<tr>
+<td>Z Custard Powder</td>
+<td>250G</td>
+<td>12/carton</td>
+<td>100/pc</td>
+<td>Tawakall</td>
+<td>Code: 1000795</td>
+</tr>
+<tr>
+<td>Z Custard Powder</td>
+<td>500G</td>
+<td>12/carton</td>
+<td>120/pc</td>
+<td>Tawakall</td>
+<td>Code: 000013947</td>
+</tr>
+<tr>
+<td>Food Colour</td>
+<td>—</td>
+<td>per dozen</td>
+<td>420/dozen</td>
+<td>Tawakall</td>
+<td>Code: 1000832</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 5: Cooking Oils &amp; Fats</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Halisi Fry</td>
+<td>10LTR</td>
+<td>per unit</td>
+<td>2,480/unit</td>
+<td>Better Deal</td>
+<td>Code: 1007042; 3 units bought</td>
+</tr>
+<tr>
+<td>Pika Oil</td>
+<td>10LTR</td>
+<td>per pc</td>
+<td>2,450/pc</td>
+<td>Tawakall</td>
+<td>Code: 000013988</td>
+</tr>
+<tr>
+<td>Popco Oil</td>
+<td>5LT</td>
+<td>4/carton</td>
+<td>5,100/carton</td>
+<td>Tawakall</td>
+<td>Code: 1001028</td>
+</tr>
+<tr>
+<td>Popco Oil</td>
+<td>3LT</td>
+<td>6/carton</td>
+<td>4,850/carton</td>
+<td>Tawakall</td>
+<td>Code: 1001027</td>
+</tr>
+<tr>
+<td>Popco Oil</td>
+<td>2LTR</td>
+<td>6/carton</td>
+<td>3,250–3,270/carton</td>
+<td>Tawakall</td>
+<td>Code: 000013989</td>
+</tr>
+<tr>
+<td>Popco Oil</td>
+<td>1LTR</td>
+<td>12/carton</td>
+<td>3,370/carton</td>
+<td>Lukman Wholesalers</td>
+<td>290/pc from G-Wholesalers</td>
+</tr>
+<tr>
+<td>Popco Oil</td>
+<td>500ML</td>
+<td>12/carton</td>
+<td>1,850–1,950/carton</td>
+<td>Lukman Wholesalers; G-Wholesalers</td>
+<td>Price varies by supplier</td>
+</tr>
+<tr>
+<td>Rinsun Sunflower Oil</td>
+<td>3LT</td>
+<td>6/carton</td>
+<td>6,700/carton</td>
+<td>Tawakall</td>
+<td>Code: 000003675</td>
+</tr>
+<tr>
+<td>Olivita Oil</td>
+<td>250ML</td>
+<td>12/carton</td>
+<td>3,300/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014217; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Kentaste Coconut Oil</td>
+<td>500ML</td>
+<td>12/carton</td>
+<td>6,300/carton</td>
+<td>Tawakall; G-Wholesalers</td>
+<td>Code: 000004289; 560/unit from G-Wholesalers</td>
+</tr>
+<tr>
+<td>Kentaste Coconut Oil</td>
+<td>200ML</td>
+<td>12/carton</td>
+<td>3,400/carton</td>
+<td>Tawakall; G-Wholesalers</td>
+<td>Code: 000004103; 290/pc from G-Wholesalers</td>
+</tr>
+<tr>
+<td>CBC PL Oil</td>
+<td>500ML</td>
+<td>20/carton</td>
+<td>5,100/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004312; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Blue Band</td>
+<td>500G</td>
+<td>24/carton</td>
+<td>5,800/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004383; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Blue Band</td>
+<td>100G</td>
+<td>48/dozen</td>
+<td>700/dozen</td>
+<td>Tawakall</td>
+<td>Code: 1000761</td>
+</tr>
+<tr>
+<td>Blue Band</td>
+<td>250G</td>
+<td>48/dozen</td>
+<td>1,600/dozen</td>
+<td>Tawakall</td>
+<td>Code: 1000763</td>
+</tr>
+<tr>
+<td>Blue Band</td>
+<td>1KG</td>
+<td>12/carton</td>
+<td>5,650/carton</td>
+<td>Tawakall</td>
+<td>Code: 1000762; ⚠️ see price flag</td>
+</tr>
+<tr>
+<td>Vatika Oil</td>
+<td>—</td>
+<td>per pc</td>
+<td>375/pc</td>
+<td>G-Wholesalers</td>
+<td>6 units bought</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 6: Dairy &amp; Milk</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hilwa Condensed Milk</td>
+<td>390G</td>
+<td>48/carton</td>
+<td>270/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014612</td>
+</tr>
+<tr>
+<td>Hilwa Milk</td>
+<td>2.5KG</td>
+<td>6/carton</td>
+<td>16,600–17,100/carton</td>
+<td>Tawakall; Amana</td>
+<td>Code: 1000861; price varies by supplier</td>
+</tr>
+<tr>
+<td>Hilwa OTS</td>
+<td>1KG</td>
+<td>per carton</td>
+<td>3,650/carton</td>
+<td>Bahati Superstar</td>
+<td></td>
+</tr>
+<tr>
+<td>Lato Milk</td>
+<td>2.5KG</td>
+<td>6/carton</td>
+<td>2,350–15,050/carton</td>
+<td>Tawakall</td>
+<td>Code: 000013801; ⚠️ FLAG: wide price range — likely PDF entry error, verify</td>
+</tr>
+<tr>
+<td>Lato Milk</td>
+<td>800G</td>
+<td>12/carton</td>
+<td>12,200/carton</td>
+<td>Tawakall</td>
+<td>Code: 000013815</td>
+</tr>
+<tr>
+<td>Brookside Milk Tin</td>
+<td>900G</td>
+<td>12/carton</td>
+<td>11,600/carton</td>
+<td>Tawakall</td>
+<td>Code: 000008699</td>
+</tr>
+<tr>
+<td>Brookside Milk Tin</td>
+<td>2.5KG</td>
+<td>6/carton</td>
+<td>13,600–14,300/carton</td>
+<td>Tawakall; Gorgor Foodstuffs</td>
+<td>Code: 000005292</td>
+</tr>
+<tr>
+<td>Brookside</td>
+<td>200ML</td>
+<td>per box</td>
+<td>640/box</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>VGG Coconut Cream</td>
+<td>400ML</td>
+<td>24/carton</td>
+<td>4,800/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004117</td>
+</tr>
+<tr>
+<td>VGG Coconut Milk</td>
+<td>400ML</td>
+<td>24/carton</td>
+<td>200/pc</td>
+<td>Tawakall</td>
+<td>Code: 000004316</td>
+</tr>
+<tr>
+<td>Naan Milk</td>
+<td>400G</td>
+<td>per pc</td>
+<td>1,550/pc</td>
+<td>Amana General Store</td>
+<td></td>
+</tr>
+<tr>
+<td>Daima</td>
+<td>500ML</td>
+<td>18/box</td>
+<td>940/box</td>
+<td>G-Wholesalers</td>
+<td>Code: 000001674</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 7: Beverages — Juices</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MM Tropical</td>
+<td>400ML</td>
+<td>12/dozen</td>
+<td>850/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000005278</td>
+</tr>
+<tr>
+<td>MM Mango</td>
+<td>400ML</td>
+<td>12/dozen</td>
+<td>850/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000004222</td>
+</tr>
+<tr>
+<td>MM Apple</td>
+<td>400ML</td>
+<td>12/dozen</td>
+<td>850/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000005277</td>
+</tr>
+<tr>
+<td>MM Tropical</td>
+<td>1L</td>
+<td>12/dozen</td>
+<td>1,600/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000007610</td>
+</tr>
+<tr>
+<td>MM Mango Juice</td>
+<td>1LTR</td>
+<td>12/dozen</td>
+<td>1,600/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000004641</td>
+</tr>
+<tr>
+<td>MM Apple</td>
+<td>1L</td>
+<td>12/carton</td>
+<td>14,200/carton</td>
+<td>Tawakall</td>
+<td>Code: 000007608; ⚠️ FLAG: verify — may be per-unit price, images show 1,600–1,800/carton</td>
+</tr>
+<tr>
+<td>Brava Apple</td>
+<td>300ML</td>
+<td>12/carton</td>
+<td>400–420/carton</td>
+<td>Tawakall; Eastline; Supersanta</td>
+<td>Code: 000005407</td>
+</tr>
+<tr>
+<td>Brava Mango</td>
+<td>300ML</td>
+<td>12/carton</td>
+<td>400–410/carton</td>
+<td>Tawakall; Eastline; Supersanta</td>
+<td>Code: 000005408</td>
+</tr>
+<tr>
+<td>Brava Guava</td>
+<td>300ML</td>
+<td>per carton</td>
+<td>410/carton</td>
+<td>Supersanta</td>
+<td>⚠️ UNPAID INVOICE (Supersanta)</td>
+</tr>
+<tr>
+<td>Aqua Clear</td>
+<td>500ML</td>
+<td>12/dozen</td>
+<td>320/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000007605</td>
+</tr>
+<tr>
+<td>Aqua Clear</td>
+<td>1LT</td>
+<td>per bale</td>
+<td>560–580/bale</td>
+<td>G-Wholesalers; Eastline</td>
+<td>Code: 000002433</td>
+</tr>
+<tr>
+<td>Predator Energy</td>
+<td>400ML</td>
+<td>12/carton</td>
+<td>640–650/carton</td>
+<td>Tawakall; Eastline</td>
+<td>Code: 000005162</td>
+</tr>
+<tr>
+<td>Husni Vimto</td>
+<td>710ML</td>
+<td>12/carton</td>
+<td>3,750/carton</td>
+<td>Better Deal</td>
+<td></td>
+</tr>
+<tr>
+<td>Vania</td>
+<td>250ML</td>
+<td>per carton</td>
+<td>1,080/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Strawberry Milk</td>
+<td>250ML</td>
+<td>per carton</td>
+<td>1,080/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Vanilla Milk</td>
+<td>240ML</td>
+<td>per carton</td>
+<td>1,080/carton</td>
+<td>Supersanta</td>
+<td>⚠️ UNPAID INVOICE (Supersanta)</td>
+</tr>
+<tr>
+<td>Strawberry Milk</td>
+<td>240ML</td>
+<td>per carton</td>
+<td>1,080/carton</td>
+<td>Supersanta</td>
+<td>⚠️ UNPAID INVOICE (Supersanta)</td>
+</tr>
+<tr>
+<td>Vanilla</td>
+<td>480ML</td>
+<td>per carton</td>
+<td>1,030/carton</td>
+<td>Supersanta</td>
+<td>⚠️ UNPAID INVOICE (Supersanta)</td>
+</tr>
+<tr>
+<td>Daima Strawberry</td>
+<td>500ML</td>
+<td>per carton</td>
+<td>1,030/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Fritz Apple</td>
+<td>250ML</td>
+<td>per carton</td>
+<td>400/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Fritz Mango</td>
+<td>250ML</td>
+<td>per carton</td>
+<td>400/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Frutz Mango</td>
+<td>300ML</td>
+<td>per carton</td>
+<td>800/carton</td>
+<td>Supersanta</td>
+<td>⚠️ UNPAID INVOICE (Supersanta)</td>
+</tr>
+<tr>
+<td>Frutz Apple</td>
+<td>300ML</td>
+<td>per carton</td>
+<td>800/carton</td>
+<td>Supersanta</td>
+<td>⚠️ UNPAID INVOICE (Supersanta)</td>
+</tr>
+<tr>
+<td>Frutz Pineapple</td>
+<td>300ML</td>
+<td>per carton</td>
+<td>800/carton</td>
+<td>Supersanta</td>
+<td>⚠️ UNPAID INVOICE (Supersanta)</td>
+</tr>
+<tr>
+<td>Minjte Mango</td>
+<td>400ML</td>
+<td>per carton</td>
+<td>840/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Minjte Apple</td>
+<td>400ML</td>
+<td>per carton</td>
+<td>840/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Minjte Pulpy</td>
+<td>400ML</td>
+<td>per carton</td>
+<td>840/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Minjte Maid Apple</td>
+<td>1L</td>
+<td>per carton</td>
+<td>1,600/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Azam</td>
+<td>—</td>
+<td>per carton</td>
+<td>800/carton</td>
+<td>Eastline</td>
+<td>Product size/flavour not specified</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 8: Beverages — Sodas</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Soda Coca Cola</td>
+<td>350ML</td>
+<td>24/carton</td>
+<td>980/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004230</td>
+</tr>
+<tr>
+<td>Soda Black Currant</td>
+<td>350ML</td>
+<td>24/carton</td>
+<td>980/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005262</td>
+</tr>
+<tr>
+<td>Soda Orange</td>
+<td>350ML</td>
+<td>24/carton</td>
+<td>980/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005261</td>
+</tr>
+<tr>
+<td>Soda Sprite</td>
+<td>350ML</td>
+<td>24/dozen</td>
+<td>1,600/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000005280</td>
+</tr>
+<tr>
+<td>Soda Fanta</td>
+<td>350ML</td>
+<td>24/carton</td>
+<td>980/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Soda Blackcurrant</td>
+<td>350ML</td>
+<td>24/carton</td>
+<td>980/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 9: Water</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Top One Water</td>
+<td>—</td>
+<td>per packet</td>
+<td>280/packet</td>
+<td>Mire Shop</td>
+<td>Code: 000021902</td>
+</tr>
+<tr>
+<td>Water</td>
+<td>20L</td>
+<td>per unit</td>
+<td>100/unit</td>
+<td>Mire Shop</td>
+<td>Code: 000003363</td>
+</tr>
+<tr>
+<td>Glacier Water</td>
+<td>5LTR</td>
+<td>per box</td>
+<td>360/box</td>
+<td>G-Wholesalers; Eastline</td>
+<td>Code: 10000388</td>
+</tr>
+<tr>
+<td>Glacier Water</td>
+<td>1.5L</td>
+<td>per box</td>
+<td>360/box</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Glacier Water</td>
+<td>500ML</td>
+<td>per box</td>
+<td>360/box</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Mount Kenya</td>
+<td>500ML</td>
+<td>per carton</td>
+<td>1,270/carton</td>
+<td>Best Size General Trading</td>
+<td></td>
+</tr>
+<tr>
+<td>Daima</td>
+<td>500ML</td>
+<td>18/box</td>
+<td>940/box</td>
+<td>G-Wholesalers</td>
+<td>Code: 000001674</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 10: Tea &amp; Coffee</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ken Fresh Tea</td>
+<td>500G</td>
+<td>20/carton</td>
+<td>3,250/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004158</td>
+</tr>
+<tr>
+<td>Kericho Gold</td>
+<td>250G</td>
+<td>24/carton</td>
+<td>4,150/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004518</td>
+</tr>
+<tr>
+<td>Kericho Gold</td>
+<td>100G</td>
+<td>12/carton</td>
+<td>2,800/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005142</td>
+</tr>
+<tr>
+<td>Kericho Gold (various)</td>
+<td>—</td>
+<td>per carton</td>
+<td>2,850/carton</td>
+<td>Lukman Wholesalers</td>
+<td>Size not specified on receipt</td>
+</tr>
+<tr>
+<td>Kericho Jr</td>
+<td>500G</td>
+<td>6/carton</td>
+<td>400/pc</td>
+<td>Amana</td>
+<td></td>
+</tr>
+<tr>
+<td>Fahari Tea</td>
+<td>50G</td>
+<td>20/packet</td>
+<td>200/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004471</td>
+</tr>
+<tr>
+<td>Fahari Tea</td>
+<td>100G</td>
+<td>10/packet</td>
+<td>370/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004472</td>
+</tr>
+<tr>
+<td>Nescafe</td>
+<td>50G</td>
+<td>24/carton</td>
+<td>7,100/carton</td>
+<td>Tawakall</td>
+<td>Code: 1001249; 0.5 carton bought</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 11: Breakfast Cereals</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Salama Oats</td>
+<td>1KG</td>
+<td>9/carton</td>
+<td>2,510/carton</td>
+<td>Tawakall</td>
+<td>Code: 1001022</td>
+</tr>
+<tr>
+<td>Weetabix</td>
+<td>425G</td>
+<td>24/carton</td>
+<td>7,600/carton</td>
+<td>Tawakall</td>
+<td>Code: 000007652; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Weetabix</td>
+<td>850G</td>
+<td>12/carton</td>
+<td>4,400/carton</td>
+<td>Tawakall</td>
+<td>Code: 1000111; 0.5 carton bought</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 12: Condiments &amp; Sauces</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zesta Jam</td>
+<td>900G</td>
+<td>12/carton</td>
+<td>3,600/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005479</td>
+</tr>
+<tr>
+<td>Zesta Jam</td>
+<td>450G</td>
+<td>12/carton</td>
+<td>2,050/carton</td>
+<td>Tawakall</td>
+<td>Code: 000012754</td>
+</tr>
+<tr>
+<td>Zesta Jam</td>
+<td>100G</td>
+<td>20/dozen</td>
+<td>450/dozen</td>
+<td>Gorgor Foodstuffs</td>
+<td></td>
+</tr>
+<tr>
+<td>Zesta Jam</td>
+<td>200G</td>
+<td>12/dozen</td>
+<td>800/dozen</td>
+<td>Gorgor Foodstuffs</td>
+<td></td>
+</tr>
+<tr>
+<td>Zesta Peanut Butter</td>
+<td>800G</td>
+<td>6/carton</td>
+<td>2,750/carton</td>
+<td>Better Deal</td>
+<td></td>
+</tr>
+<tr>
+<td>Zesta Peanut Butter</td>
+<td>400G</td>
+<td>per pc</td>
+<td>300/pc</td>
+<td>Ukamil Wholesalers</td>
+<td>6 units bought</td>
+</tr>
+<tr>
+<td>Heinz Ketchup</td>
+<td>570G</td>
+<td>10/carton</td>
+<td>3,800/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004467</td>
+</tr>
+<tr>
+<td>ZST Ketchup</td>
+<td>700G</td>
+<td>12/carton</td>
+<td>2,800/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014090</td>
+</tr>
+<tr>
+<td>Dana Chili</td>
+<td>250G</td>
+<td>24/carton</td>
+<td>1,200/carton</td>
+<td>G-Wholesalers</td>
+<td>Code: 000001250</td>
+</tr>
+<tr>
+<td>Dana Chili</td>
+<td>250ML</td>
+<td>24/carton</td>
+<td>1,050/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004420</td>
+</tr>
+<tr>
+<td>Dana Vinegar</td>
+<td>700ML</td>
+<td>12/carton</td>
+<td>620/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004506</td>
+</tr>
+<tr>
+<td>Faragello Tomato</td>
+<td>50G sachets</td>
+<td>4x25/carton</td>
+<td>1,400/carton</td>
+<td>Tawakall</td>
+<td>Code: 1001084</td>
+</tr>
+<tr>
+<td>Nutella/Nutei La Choco</td>
+<td>350G</td>
+<td>15/carton</td>
+<td>570/pc</td>
+<td>Tawakall</td>
+<td>Code: 000004437</td>
+</tr>
+<tr>
+<td>Nutella</td>
+<td>350G</td>
+<td>16/carton</td>
+<td>9,400/carton</td>
+<td>Gorgor Foodstuffs</td>
+<td></td>
+</tr>
+<tr>
+<td>Nuura Cream Nutella</td>
+<td>—</td>
+<td>per carton</td>
+<td>2,630/carton</td>
+<td>Better Deal</td>
+<td></td>
+</tr>
+<tr>
+<td>Shafi Honey</td>
+<td>900G</td>
+<td>per pc</td>
+<td>250/pc</td>
+<td>Amana</td>
+<td></td>
+</tr>
+<tr>
+<td>AM Mayonnaise</td>
+<td>473ML</td>
+<td>per pc</td>
+<td>350/pc</td>
+<td>Ukamil Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Royco Cube</td>
+<td>4G sachets</td>
+<td>24x40/packet</td>
+<td>170/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004438</td>
+</tr>
+<tr>
+<td>Soy Sauce Dark</td>
+<td>625ML</td>
+<td>12/carton</td>
+<td>2,500/carton</td>
+<td>Gorgor Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Lemon (sauce/juice)</td>
+<td>300ML</td>
+<td>per ea</td>
+<td>470/ea</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 13: Canned &amp; Preserved Foods</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hilwa Tuna</td>
+<td>95G</td>
+<td>48/carton</td>
+<td>5,350/carton</td>
+<td>Tawakall</td>
+<td>Code: 1000866</td>
+</tr>
+<tr>
+<td>Omaar Tuna Small</td>
+<td>95G</td>
+<td>48/carton</td>
+<td>5,150–5,420/carton</td>
+<td>Tawakall; Lukman; G-Wholesalers</td>
+<td>Code: 000007598; price varies by supplier</td>
+</tr>
+<tr>
+<td>Omaar Samaki Big</td>
+<td>—</td>
+<td>per carton</td>
+<td>9,550/carton</td>
+<td>Amana General Store</td>
+<td></td>
+</tr>
+<tr>
+<td>CBC Tin</td>
+<td>325G</td>
+<td>24/carton</td>
+<td>5,700/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005481; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Gilda Beans</td>
+<td>400G</td>
+<td>24/carton</td>
+<td>1,650/carton</td>
+<td>Tawakall</td>
+<td>Code: 000011734</td>
+</tr>
+<tr>
+<td>Saad Timir (Dates)</td>
+<td>10KG</td>
+<td>per carton</td>
+<td>3,750/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004259</td>
+</tr>
+<tr>
+<td>Cheese (Chef processed)</td>
+<td>—</td>
+<td>per carton</td>
+<td>6,800/carton</td>
+<td>Gorgor Wholesalers</td>
+<td>⚠️ Product name unclear — likely Chef processed cheese 48 slices, confirm</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 14: Snacks, Biscuits &amp; Confectionery</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Abu Walad Biscuit</td>
+<td>100G</td>
+<td>48/carton</td>
+<td>2,200/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004384</td>
+</tr>
+<tr>
+<td>Oreo Original</td>
+<td>—</td>
+<td>5x40x24/outer</td>
+<td>890–900/outer</td>
+<td>Tawakall</td>
+<td>Code: 000014680; ⚠️ VOIDED on receipt #0007147</td>
+</tr>
+<tr>
+<td>Oreo Chocolate</td>
+<td>26.25G</td>
+<td>8x12/packet</td>
+<td>420/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004236</td>
+</tr>
+<tr>
+<td>Twist Biscuit</td>
+<td>—</td>
+<td>6x24/packet</td>
+<td>500/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004878</td>
+</tr>
+<tr>
+<td>Space Jumbo XL</td>
+<td>—</td>
+<td>4x60/bale</td>
+<td>4,050/bale</td>
+<td>Tawakall</td>
+<td>Code: 000014118</td>
+</tr>
+<tr>
+<td>Bigg Daddy LLPP</td>
+<td>—</td>
+<td>16x50/packet</td>
+<td>280/packet</td>
+<td>Tawakall</td>
+<td>Code: 000013932</td>
+</tr>
+<tr>
+<td>Lindo Cake</td>
+<td>45G</td>
+<td>6x24/carton</td>
+<td>3,900/carton</td>
+<td>Tawakall</td>
+<td>Code: 000013936</td>
+</tr>
+<tr>
+<td>Heart CHC/CAG</td>
+<td>—</td>
+<td>12x84–90/packet</td>
+<td>570/packet</td>
+<td>Tawakall</td>
+<td>Code: 000014383/000014724</td>
+</tr>
+<tr>
+<td>Bubbly CHC</td>
+<td>24G</td>
+<td>12/packet</td>
+<td>1,000/packet</td>
+<td>Tawakall</td>
+<td>Code: 000014703</td>
+</tr>
+<tr>
+<td>Choco Licious</td>
+<td>50G</td>
+<td>96/carton</td>
+<td>6,400/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014686; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Snickers CHC</td>
+<td>50G</td>
+<td>12x24/outer</td>
+<td>2,150/outer</td>
+<td>Tawakall</td>
+<td>Code: 000014531</td>
+</tr>
+<tr>
+<td>Krackles Chilly</td>
+<td>30G</td>
+<td>per carton</td>
+<td>2,150/carton</td>
+<td>Salamatwo Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Nuts Crisps</td>
+<td>—</td>
+<td>per carton</td>
+<td>320/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Star Cream Cake</td>
+<td>—</td>
+<td>per carton</td>
+<td>240/carton</td>
+<td>Eastline</td>
+<td></td>
+</tr>
+<tr>
+<td>Happy Happy Biscuit</td>
+<td>—</td>
+<td>per carton</td>
+<td>260/carton</td>
+<td>Lukman Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Prestige</td>
+<td>250G</td>
+<td>per pc</td>
+<td>130/pc</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Foster Mango</td>
+<td>20G</td>
+<td>10x15/packet</td>
+<td>580/packet</td>
+<td>Tawakall</td>
+<td>Code: 000013935</td>
+</tr>
+<tr>
+<td>Foster Pineapple</td>
+<td>20G</td>
+<td>10x15/packet</td>
+<td>580/packet</td>
+<td>Tawakall</td>
+<td>Code: 000013934</td>
+</tr>
+<tr>
+<td>Foster Cocktail</td>
+<td>20G</td>
+<td>10x15/packet</td>
+<td>580/packet</td>
+<td>Tawakall</td>
+<td>Code: 000013916</td>
+</tr>
+<tr>
+<td>Foster Orange</td>
+<td>20G</td>
+<td>10x15/packet</td>
+<td>580/packet</td>
+<td>Tawakall</td>
+<td>Code: 000006574</td>
+</tr>
+<tr>
+<td>Raha Drinking Chocolate</td>
+<td>200G</td>
+<td>24/carton</td>
+<td>180/pc</td>
+<td>Tawakall</td>
+<td>Code: 1000812</td>
+</tr>
+<tr>
+<td>Raha Drinking Chocolate</td>
+<td>400G</td>
+<td>12/carton</td>
+<td>310/pc</td>
+<td>Tawakall</td>
+<td>Code: 1000813</td>
+</tr>
+<tr>
+<td>Batook Gum</td>
+<td>—</td>
+<td>50x20x5/packet</td>
+<td>200/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004634</td>
+</tr>
+<tr>
+<td>Mabuyuz Gum</td>
+<td>—</td>
+<td>20x50/carton</td>
+<td>1,600/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005288</td>
+</tr>
+<tr>
+<td>Juicy Fruit Gum</td>
+<td>—</td>
+<td>36x50/packet</td>
+<td>370/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004426</td>
+</tr>
+<tr>
+<td>Jumbo Chicken Snack</td>
+<td>480G</td>
+<td>24x48/packet</td>
+<td>290/packet</td>
+<td>Tawakall</td>
+<td>Code: 000003864</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 15: Pulses &amp; Legumes</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Asanta Green Gram</td>
+<td>500G</td>
+<td>48/carton</td>
+<td>4,200/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005447</td>
+</tr>
+<tr>
+<td>Gilda Beans</td>
+<td>400G</td>
+<td>24/carton</td>
+<td>1,650/carton</td>
+<td>Tawakall</td>
+<td>Code: 000011734; also listed in Canned Foods</td>
+</tr>
+<tr>
+<td>Yellow Beans</td>
+<td>per kg</td>
+<td>per kg</td>
+<td>130/kg</td>
+<td>Kulmis Spices</td>
+<td>Also listed in Spices section</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 16: Salt</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kensalt</td>
+<td>1KG</td>
+<td>20/box</td>
+<td>650/box</td>
+<td>G-Wholesalers</td>
+<td>Code: 000001694</td>
+</tr>
+<tr>
+<td>Kensalt / Towfiq</td>
+<td>200G</td>
+<td>30/carton</td>
+<td>260/carton</td>
+<td>Salamatwo</td>
+<td></td>
+</tr>
+<tr>
+<td>Kensalt / Towfiq</td>
+<td>500G</td>
+<td>40/bale</td>
+<td>720/bale</td>
+<td>Salamatwo</td>
+<td></td>
+</tr>
+<tr>
+<td>Chunvi</td>
+<td>1KG</td>
+<td>20/bale</td>
+<td>600/bale</td>
+<td>Tawakall</td>
+<td>Code: 000004392; ⚠️ VOIDED — returned via Credit Note #0000606</td>
+</tr>
+<tr>
+<td>Chunvi</td>
+<td>200G</td>
+<td>30/bale</td>
+<td>270/bale</td>
+<td>Tawakall</td>
+<td>Code: 000004393</td>
+</tr>
+<tr>
+<td>IDP White</td>
+<td>10KG</td>
+<td>per bag</td>
+<td>1,150/bag</td>
+<td>Tawakall</td>
+<td>Code: 000004644</td>
+</tr>
+<tr>
+<td>Doffy White</td>
+<td>10KG</td>
+<td>per bale</td>
+<td>1,060/bale</td>
+<td>Tawakall</td>
+<td>Code: 000013955</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 17: Personal Care — Soaps</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Lifebouy Soap</td>
+<td>125G</td>
+<td>144/carton</td>
+<td>130/pc</td>
+<td>Tawakall</td>
+<td>Code: 000013986</td>
+</tr>
+<tr>
+<td>Lux Soap</td>
+<td>165G</td>
+<td>72/carton</td>
+<td>120/pc</td>
+<td>Tawakall</td>
+<td>Code: 000004908</td>
+</tr>
+<tr>
+<td>Imperial Leather</td>
+<td>175G</td>
+<td>24/carton</td>
+<td>100/pc</td>
+<td>Tawakall</td>
+<td>Code: 000004089</td>
+</tr>
+<tr>
+<td>Geisha Soap</td>
+<td>80G</td>
+<td>36/carton</td>
+<td>50/pc</td>
+<td>Tawakall</td>
+<td>Code: 1000836</td>
+</tr>
+<tr>
+<td>Geisha Soap</td>
+<td>200G</td>
+<td>24/carton</td>
+<td>200/pc</td>
+<td>Tawakall</td>
+<td>Code: 1000837</td>
+</tr>
+<tr>
+<td>Dove Soap</td>
+<td>135G</td>
+<td>48/carton</td>
+<td>150/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014693</td>
+</tr>
+<tr>
+<td>Dettol Soap</td>
+<td>90G</td>
+<td>72/carton</td>
+<td>50/pc</td>
+<td>Tawakall</td>
+<td>Code: 000004821</td>
+</tr>
+<tr>
+<td>Baby Soap</td>
+<td>—</td>
+<td>per pc</td>
+<td>95/pc</td>
+<td>G-Wholesalers</td>
+<td>Code: 000002928</td>
+</tr>
+<tr>
+<td>Jamaa Soap Big</td>
+<td>800G</td>
+<td>25/carton</td>
+<td>3,900/carton</td>
+<td>Tawakall</td>
+<td>Code: 1000877</td>
+</tr>
+<tr>
+<td>White Wash</td>
+<td>175G</td>
+<td>48/carton</td>
+<td>1,570/carton</td>
+<td>Tawakall</td>
+<td>Code: 1001386</td>
+</tr>
+<tr>
+<td>Vaseline</td>
+<td>45ML</td>
+<td>144/carton</td>
+<td>700/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000004604</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 18: Personal Care — Shampoos, Hair &amp; Body</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dove Shampoo</td>
+<td>400ML</td>
+<td>24/carton</td>
+<td>140–420/pc</td>
+<td>Tawakall</td>
+<td>Code: 000005341; ⚠️ FLAG: two prices on same receipt — verify</td>
+</tr>
+<tr>
+<td>Head &amp; Shoulders</td>
+<td>400ML</td>
+<td>24/carton</td>
+<td>470/pc</td>
+<td>Tawakall</td>
+<td>Code: 000003783</td>
+</tr>
+<tr>
+<td>Pantene Shampoo</td>
+<td>400ML</td>
+<td>24/carton</td>
+<td>370/pc</td>
+<td>Tawakall</td>
+<td>Code: 000005225</td>
+</tr>
+<tr>
+<td>Argan Treatment</td>
+<td>1000ML</td>
+<td>18/carton</td>
+<td>360/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014281</td>
+</tr>
+<tr>
+<td>Argan Shampoo</td>
+<td>900ML</td>
+<td>20/carton</td>
+<td>420/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014282</td>
+</tr>
+<tr>
+<td>Argan Conditioner</td>
+<td>1000ML</td>
+<td>20/carton</td>
+<td>420/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014283</td>
+</tr>
+<tr>
+<td>Taam Treatment</td>
+<td>1000G</td>
+<td>24/carton</td>
+<td>200/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014033</td>
+</tr>
+<tr>
+<td>Mayonnaise Treatment</td>
+<td>1000G</td>
+<td>24/carton</td>
+<td>7,300/carton</td>
+<td>Tawakall</td>
+<td>Code: 000013855; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Summer Shampoo</td>
+<td>1380ML</td>
+<td>24/carton</td>
+<td>2,200/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005354; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Boutique Shampoo</td>
+<td>1000ML</td>
+<td>12/carton</td>
+<td>5,600/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014002; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Baby Shampoo</td>
+<td>300ML</td>
+<td>12/carton</td>
+<td>4,000/carton</td>
+<td>Tawakall</td>
+<td>Code: 000003713; 0.5 carton bought</td>
+</tr>
+<tr>
+<td>Clear Shampoo</td>
+<td>5L</td>
+<td>per carton</td>
+<td>880/carton</td>
+<td>Better Deal</td>
+<td></td>
+</tr>
+<tr>
+<td>Taam Shampoo</td>
+<td>5L</td>
+<td>4/carton</td>
+<td>950/carton</td>
+<td>Gorgor Foodstuffs</td>
+<td></td>
+</tr>
+<tr>
+<td>Crystal Shampoo</td>
+<td>5LTR</td>
+<td>4/carton</td>
+<td>820/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004492</td>
+</tr>
+<tr>
+<td>Ujoba Body Wash</td>
+<td>500ML</td>
+<td>24/carton</td>
+<td>7,400/carton</td>
+<td>Gorgor Foodstuffs</td>
+<td>0.5 carton bought</td>
+</tr>
+<tr>
+<td>American Dream</td>
+<td>—</td>
+<td>per pc</td>
+<td>780/pc</td>
+<td>G-Wholesalers</td>
+<td>⚠️ Likely a hair product — confirm type</td>
+</tr>
+<tr>
+<td>Amara Lotion</td>
+<td>400ML</td>
+<td>12/carton</td>
+<td>2,400–2,800/carton</td>
+<td>Tawakall; Gorgor Foodstuffs</td>
+<td>Code: 000004029</td>
+</tr>
+<tr>
+<td>RDL Lotion</td>
+<td>600ML</td>
+<td>12/carton</td>
+<td>4,150/carton</td>
+<td>Tawakall</td>
+<td>Code: 000013799</td>
+</tr>
+<tr>
+<td>RDL Lotion</td>
+<td>200ML</td>
+<td>36/carton</td>
+<td>180/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014560</td>
+</tr>
+<tr>
+<td>Pretty B Wash</td>
+<td>500G</td>
+<td>24/carton</td>
+<td>310/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014409</td>
+</tr>
+<tr>
+<td>Dabur Value Park</td>
+<td>150G</td>
+<td>per pc</td>
+<td>230/pc</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Vatika Oil</td>
+<td>—</td>
+<td>per pc</td>
+<td>375/pc</td>
+<td>G-Wholesalers</td>
+<td></td>
+</tr>
+<tr>
+<td>Arimis</td>
+<td>90G</td>
+<td>12/carton</td>
+<td>670/drs</td>
+<td>G-Wholesalers</td>
+<td>Code: 000003282</td>
+</tr>
+<tr>
+<td>Colgate TP Charcoal</td>
+<td>120ML</td>
+<td>96/carton</td>
+<td>2,900/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000005522</td>
+</tr>
+<tr>
+<td>Baby Oil</td>
+<td>300ML</td>
+<td>12/carton</td>
+<td>4,700/carton</td>
+<td>Tawakall</td>
+<td>Code: 000010723; 0.5 carton bought</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 19: Oral Care</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Colgate Red</td>
+<td>35G</td>
+<td>144/carton</td>
+<td>750/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000013894</td>
+</tr>
+<tr>
+<td>Colgate Red</td>
+<td>100G</td>
+<td>72/carton</td>
+<td>1,550/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000004021</td>
+</tr>
+<tr>
+<td>Colgate Herbal</td>
+<td>100G</td>
+<td>72/carton</td>
+<td>1,550/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000004104</td>
+</tr>
+<tr>
+<td>Colgate Red (mini)</td>
+<td>15ML</td>
+<td>12x24/outer</td>
+<td>700/outer</td>
+<td>Tawakall</td>
+<td>Code: 000004717</td>
+</tr>
+<tr>
+<td>Colgate Anticavity</td>
+<td>—</td>
+<td>144/carton</td>
+<td>360/dozen</td>
+<td>Tawakall</td>
+<td>Code: 000009712</td>
+</tr>
+<tr>
+<td>Good Doctor Toothbrush</td>
+<td>—</td>
+<td>per outer</td>
+<td>1,150–1,650/outer</td>
+<td>Tawakall; G-Wholesalers</td>
+<td>Code: 000014552; price varies by supplier</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 20: Cleaning Products</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ushindi Dishwashing Paste</td>
+<td>—</td>
+<td>per pc</td>
+<td>370/pc</td>
+<td>G-Wholesalers</td>
+<td>Code: 000002230</td>
+</tr>
+<tr>
+<td>Safi Instant</td>
+<td>11G</td>
+<td>per outer</td>
+<td>170/outer</td>
+<td>G-Wholesalers</td>
+<td>Code: 000002479</td>
+</tr>
+<tr>
+<td>Downy</td>
+<td>20ML</td>
+<td>60/carton</td>
+<td>950/carton</td>
+<td>Tawakall</td>
+<td>Code: 000009705</td>
+</tr>
+<tr>
+<td>Downy New</td>
+<td>900ML</td>
+<td>12/carton</td>
+<td>670/carton</td>
+<td>G-Wholesalers</td>
+<td>Code: 000002536</td>
+</tr>
+<tr>
+<td>Sta Soft</td>
+<td>750ML</td>
+<td>24/carton</td>
+<td>310/pc</td>
+<td>G-Wholesalers</td>
+<td>Code: 000001407</td>
+</tr>
+<tr>
+<td>So Soft</td>
+<td>5L</td>
+<td>4/carton</td>
+<td>930/pc</td>
+<td>Gorgor Foodstuffs</td>
+<td></td>
+</tr>
+<tr>
+<td>Crystal White</td>
+<td>5LTR</td>
+<td>4/carton</td>
+<td>680/carton</td>
+<td>Tawakall</td>
+<td>Code: 000004488</td>
+</tr>
+<tr>
+<td>Nash TMT</td>
+<td>5LTR</td>
+<td>4/carton</td>
+<td>840/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014306</td>
+</tr>
+<tr>
+<td>Nash Chili</td>
+<td>5LTR</td>
+<td>4/carton</td>
+<td>820/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014506</td>
+</tr>
+<tr>
+<td>Jik Regular</td>
+<td>750ML</td>
+<td>18/carton</td>
+<td>2,950/carton</td>
+<td>Better Deal</td>
+<td></td>
+</tr>
+<tr>
+<td>GX Glass Cleaner</td>
+<td>500ML</td>
+<td>24/carton</td>
+<td>2,800/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014411</td>
+</tr>
+<tr>
+<td>Hand Wash</td>
+<td>500ML</td>
+<td>24/carton</td>
+<td>550/carton</td>
+<td>Tawakall</td>
+<td>Code: 000005454; 5 cartons bought</td>
+</tr>
+<tr>
+<td>Vim Powder</td>
+<td>500G</td>
+<td>24/carton</td>
+<td>120/pc</td>
+<td>Tawakall</td>
+<td>Code: 1001673</td>
+</tr>
+<tr>
+<td>Bio Bright</td>
+<td>750ML</td>
+<td>24/carton</td>
+<td>140/pc</td>
+<td>Tawakall</td>
+<td>Code: 000014619</td>
+</tr>
+<tr>
+<td>Dettol Liquid</td>
+<td>500ML</td>
+<td>24/carton</td>
+<td>350/pc</td>
+<td>Gorgor Foodstuffs</td>
+<td></td>
+</tr>
+<tr>
+<td>White Wash</td>
+<td>175G</td>
+<td>48/carton</td>
+<td>1,570/carton</td>
+<td>Tawakall</td>
+<td>Code: 1001386; also listed in Soaps section</td>
+</tr>
+<tr>
+<td>Steel Wool</td>
+<td>15G</td>
+<td>20x30/outer</td>
+<td>150/outer</td>
+<td>Tawakall</td>
+<td>Code: 000004395</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 21: Sanitary &amp; Paper Products</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Softdream XL</td>
+<td>40PC</td>
+<td>6/bale</td>
+<td>3,300/bale</td>
+<td>Tawakall</td>
+<td>Code: 000014625</td>
+</tr>
+<tr>
+<td>Softdream L</td>
+<td>42PC</td>
+<td>6/bale</td>
+<td>3,300/bale</td>
+<td>Tawakall</td>
+<td>Code: 000014626</td>
+</tr>
+<tr>
+<td>Softdream M</td>
+<td>42PC</td>
+<td>6/bale</td>
+<td>3,300/bale</td>
+<td>Tawakall</td>
+<td>Code: 000014627; ⚠️ VOIDED — returned via Credit Note #0000606</td>
+</tr>
+<tr>
+<td>Space Jumbo XL</td>
+<td>60PC</td>
+<td>4/bale</td>
+<td>4,050/bale</td>
+<td>Tawakall</td>
+<td>Code: 000014118; also listed in Snacks section</td>
+</tr>
+<tr>
+<td>Softcare XL</td>
+<td>36–40PC</td>
+<td>6/bale</td>
+<td>3,900–3,920/bale</td>
+<td>Tawakall; Gorgor</td>
+<td>Code: 000004206</td>
+</tr>
+<tr>
+<td>Softcare L</td>
+<td>40–42PC</td>
+<td>6/bale</td>
+<td>3,900/bale</td>
+<td>Tawakall</td>
+<td>Code: 000003841</td>
+</tr>
+<tr>
+<td>Softcare M</td>
+<td>42PC</td>
+<td>6/bale</td>
+<td>3,900/bale</td>
+<td>Tawakall</td>
+<td>Code: 000003855</td>
+</tr>
+<tr>
+<td>Softcare S</td>
+<td>48PC</td>
+<td>6/bale</td>
+<td>3,900/bale</td>
+<td>Tawakall</td>
+<td>Code: 000003854</td>
+</tr>
+<tr>
+<td>Softcare Always</td>
+<td>8PC</td>
+<td>24/carton</td>
+<td>1,520–1,550/carton</td>
+<td>Tawakall; Gorgor</td>
+<td>Code: 000013825</td>
+</tr>
+<tr>
+<td>Softcare Wipes</td>
+<td>80PC</td>
+<td>12/carton</td>
+<td>1,600/carton</td>
+<td>Tawakall</td>
+<td>Code: 000013973</td>
+</tr>
+<tr>
+<td>Momeasy Wiper</td>
+<td>80PC</td>
+<td>24/carton</td>
+<td>3,200/carton</td>
+<td>Tawakall</td>
+<td>Code: 000014153</td>
+</tr>
+<tr>
+<td>Bella Serviettes</td>
+<td>100PC</td>
+<td>18/bale</td>
+<td>1,150/bale</td>
+<td>Tawakall</td>
+<td>Code: 000014344</td>
+</tr>
+<tr>
+<td>Bella Toilet</td>
+<td>10PC</td>
+<td>40/box</td>
+<td>1,200/box</td>
+<td>Tawakall</td>
+<td>Code: 000014094</td>
+</tr>
+<tr>
+<td>Nile Serviette</td>
+<td>—</td>
+<td>per carton</td>
+<td>1,050/carton</td>
+<td>Gorgor Foodstuffs</td>
+<td></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 22: Air Fresheners &amp; Household</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Naseem Air Freshener</td>
+<td>300ML</td>
+<td>60/carton</td>
+<td>470/pc</td>
+<td>Tawakall</td>
+<td>Code: 000003424</td>
+</tr>
+<tr>
+<td>Airfresh Dirham</td>
+<td>300ML</td>
+<td>72/carton</td>
+<td>250/pc</td>
+<td>Tawakall</td>
+<td>Code: 000003517</td>
+</tr>
+<tr>
+<td>Charcoal</td>
+<td>10PC</td>
+<td>32/packet</td>
+<td>300/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004763</td>
+</tr>
+<tr>
+<td>Aflah Coal</td>
+<td>32PC</td>
+<td>per pc</td>
+<td>340/pc</td>
+<td>Gorgor Foodstuffs</td>
+<td></td>
+</tr>
+<tr>
+<td>Shenke Mosquito Mats</td>
+<td>—</td>
+<td>per pc</td>
+<td>80/pc</td>
+<td>Tawakall; Better Deal</td>
+<td>Code: 000004550</td>
+</tr>
+<tr>
+<td>Shenke Electric Mats</td>
+<td>120PC</td>
+<td>per packet</td>
+<td>70/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004584</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 23: Batteries</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Eveready AA</td>
+<td>5-pack</td>
+<td>per packet</td>
+<td>2,750/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004880</td>
+</tr>
+<tr>
+<td>Eveready AAA</td>
+<td>6-pack</td>
+<td>per packet</td>
+<td>3,200/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004879</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 24: Personal Grooming</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Gillette 2 Razors</td>
+<td>—</td>
+<td>per drs</td>
+<td>450/drs</td>
+<td>G-Wholesalers</td>
+<td>Code: 000002134</td>
+</tr>
+<tr>
+<td>Kids 2+Age Razors</td>
+<td>—</td>
+<td>per drs</td>
+<td>350/drs</td>
+<td>G-Wholesalers</td>
+<td>Code: 000001331</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 25: Electronics (Non-Grocery)</h2>
+<blockquote>
+<p>⚠️ NOTE: These are phone accessories sourced from MK Electronics (Yare Towers, Eastleigh). This is not typical grocery/FMCG stock. Verify whether Mabruk Shop carries electronics as a regular product line before seeding.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>iPhone 16 35W Charger</td>
+<td>—</td>
+<td>per pc</td>
+<td>400/pc</td>
+<td>MK Electronics</td>
+<td></td>
+</tr>
+<tr>
+<td>iPhone 14 35W Charger</td>
+<td>—</td>
+<td>per pc</td>
+<td>400/pc</td>
+<td>MK Electronics</td>
+<td></td>
+</tr>
+<tr>
+<td>Samsung 25W Charger</td>
+<td>—</td>
+<td>per pc</td>
+<td>250/pc</td>
+<td>MK Electronics</td>
+<td></td>
+</tr>
+<tr>
+<td>Samsung 45W Full Charger</td>
+<td>—</td>
+<td>per pc</td>
+<td>300/pc</td>
+<td>MK Electronics</td>
+<td></td>
+</tr>
+<tr>
+<td>C to C iPhone Cable</td>
+<td>—</td>
+<td>per pc</td>
+<td>100/pc</td>
+<td>MK Electronics</td>
+<td></td>
+</tr>
+<tr>
+<td>Samsung 25W Head</td>
+<td>—</td>
+<td>per pc</td>
+<td>180/pc</td>
+<td>MK Electronics</td>
+<td></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Section 26: Miscellaneous / Needs Verification</h2>
+<table>
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Size/Pack</th>
+<th>Pack Structure</th>
+<th>Wholesale Cost (KES)</th>
+<th>Supplier</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KSL Tropical</td>
+<td>1KG</td>
+<td>12/packet</td>
+<td>370/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004417; ⚠️ Product type unclear — possibly coconut-based, confirm</td>
+</tr>
+<tr>
+<td>KSL Tropical</td>
+<td>500G</td>
+<td>12/packet</td>
+<td>200/packet</td>
+<td>Tawakall</td>
+<td>Code: 000004418; ⚠️ Same as above</td>
+</tr>
+<tr>
+<td>Colgate Junior 65</td>
+<td>—</td>
+<td>per drs</td>
+<td>2,215/drs</td>
+<td>G-Wholesalers</td>
+<td>Code: 000002074</td>
+</tr>
+<tr>
+<td>American Dream</td>
+<td>—</td>
+<td>per pc</td>
+<td>780/pc</td>
+<td>G-Wholesalers</td>
+<td>⚠️ Likely hair product — confirm product type and category</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Flags &amp; Issues to Resolve Before Seeding</h2>
+<hr>
+<h3>FLAG 1: VOIDED ITEMS — Do NOT seed as stock received</h3>
+<p>These items appeared on physical receipts but were reversed via credit note or were explicitly voided. They should not be counted as received inventory.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Receipt</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Softdream M 6x42PC</td>
+<td>Tawakall #0008280</td>
+<td>Returned via Credit Note #0000606</td>
+</tr>
+<tr>
+<td>Chunvi 20x1KG</td>
+<td>Tawakall #0008280</td>
+<td>Returned via Credit Note #0000606</td>
+</tr>
+<tr>
+<td>Oreo Original 5x40x24</td>
+<td>Tawakall #0007147</td>
+<td>Marked X on physical receipt</td>
+</tr>
+</tbody></table>
+<hr>
+<h3>FLAG 2: UNPAID INVOICE — Supersanta Hub Supply</h3>
+<blockquote>
+<p>⚠️ Invoice date: 22-Aug-2026 | Total: KES 8,140 | Status: OUTSTANDING — NOT PAID</p>
+</blockquote>
+<p>Stock may have been physically received but payment has not been made. Treat with caution during seeding — stock received but liability uncleared.</p>
+<p><strong>Items on this invoice:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Product</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Frutz Mango</td>
+<td>300ML</td>
+</tr>
+<tr>
+<td>Frutz Apple</td>
+<td>300ML</td>
+</tr>
+<tr>
+<td>Frutz Pineapple</td>
+<td>300ML</td>
+</tr>
+<tr>
+<td>Brava Guava</td>
+<td>300ML</td>
+</tr>
+<tr>
+<td>Brava variants</td>
+<td>300ML</td>
+</tr>
+<tr>
+<td>Vanilla Milk</td>
+<td>240ML</td>
+</tr>
+<tr>
+<td>Strawberry Milk</td>
+<td>240ML</td>
+</tr>
+<tr>
+<td>Vanilla</td>
+<td>480ML</td>
+</tr>
+</tbody></table>
+<hr>
+<h3>FLAG 3: DUPLICATE RECEIPT IMAGES — Count only once per event</h3>
+<p>The same purchase was photographed multiple times across the image set. Each group below represents a single purchase event.</p>
+<table>
+<thead>
+<tr>
+<th>Duplicate Group</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WA0008 = WA0012</td>
+<td>Gorgor Foodstuffs, Receipt #0202733</td>
+</tr>
+<tr>
+<td>WA0014 = WA0017</td>
+<td>Tawakall, Receipt #0014370</td>
+</tr>
+<tr>
+<td>WA0015 = WA0023</td>
+<td>Salamatwo, Receipt #0799182</td>
+</tr>
+<tr>
+<td>WA0016 = WA0022</td>
+<td>Best Size General Trading</td>
+</tr>
+<tr>
+<td>WA0033 = WA0036 = WA0052</td>
+<td>Tawakall, Receipt #0007147</td>
+</tr>
+<tr>
+<td>WA0038 = WA0039</td>
+<td>Kulmis Pop Corn, Receipt #0679628</td>
+</tr>
+<tr>
+<td>WA0041 = WA0042</td>
+<td>MUKAMii, Receipt #0136130</td>
+</tr>
+<tr>
+<td>WA0026 = WA0044 = PDF Receipt #1</td>
+<td>Kulmis Spices, Receipt #0676552</td>
+</tr>
+<tr>
+<td>WA0028 = PDF Receipt #4</td>
+<td>Tawakall Credit Note</td>
+</tr>
+<tr>
+<td>WA0030 = WA0050 = PDF Receipt #5</td>
+<td>Mire Shop</td>
+</tr>
+<tr>
+<td>WA0051 = WA0053 = WA0059 = PDF Receipt #10</td>
+<td>Tawakall, Receipt #0006728 (KES 300K order)</td>
+</tr>
+<tr>
+<td>WA0043 + WA0045 + WA0046 + WA0047 + WA0048</td>
+<td>Continuation photos of Tawakall KES 300K receipt roll</td>
+</tr>
+<tr>
+<td>WA0054 = WA0057</td>
+<td>Gorgor Foodstuffs, Receipt #0180258 (customer &quot;royalmol&quot;)</td>
+</tr>
+<tr>
+<td>WA0060 + WA0061 + WA0062 + WA0063</td>
+<td>Continuation photos of Tawakall KES 300K receipt</td>
+</tr>
+</tbody></table>
+<hr>
+<h3>FLAG 4: PRICE DISCREPANCIES — Verify against paper originals</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Discrepancy</th>
+<th>Action Required</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dove Shampoo 24x400ML</td>
+<td>PDF shows KES 140/pc; images show KES 420/pc</td>
+<td>Significant gap — check paper receipt, likely PDF entry error</td>
+</tr>
+<tr>
+<td>Lato Milk 6x2.5KG</td>
+<td>PDF shows KES 2,350/carton; images show KES 13,600–15,050/carton</td>
+<td>Likely PDF entry error — verify paper receipt</td>
+</tr>
+<tr>
+<td>MM Apple 12x1L</td>
+<td>PDF shows KES 14,200/carton; images show KES 1,600–1,800/carton</td>
+<td>Verify — likely a per-unit vs per-carton confusion in PDF</td>
+</tr>
+<tr>
+<td>Blue Band 12x1KG</td>
+<td>PDF shows KES 5,650; images show KES 5,850</td>
+<td>Minor — verify but likely rounding or date-based price change</td>
+</tr>
+<tr>
+<td>Tawakall Receipt #0007147</td>
+<td>One copy dated 14-Aug-2026; another dated 06-Aug-2026</td>
+<td>Confirm correct purchase date from paper original</td>
+</tr>
+</tbody></table>
+<hr>
+<h3>FLAG 5: CUSTOMER NAME DISCREPANCIES ON RECEIPTS</h3>
+<blockquote>
+<p>⚠️ These receipts may not belong to Mabruk Shop. Verify before seeding as Mabruk inventory.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Receipt</th>
+<th>Supplier</th>
+<th>Customer Listed</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WA0004</td>
+<td>Amana General Store</td>
+<td>&quot;Royal Mall&quot;</td>
+<td>Confirm this was a Mabruk Shop purchase — KES 30,950</td>
+</tr>
+<tr>
+<td>WA0054 / WA0057</td>
+<td>Gorgor Foodstuffs, Receipt #0180258</td>
+<td>&quot;royalmol&quot;</td>
+<td>Confirm ownership — may be a separate entity</td>
+</tr>
+</tbody></table>
+<hr>
+<h3>FLAG 6: BLURRY / UNREADABLE ITEMS</h3>
+<table>
+<thead>
+<tr>
+<th>Receipt</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WA0007 (Bushra Wholesalers)</td>
+<td>Item 2 — name appears to be &quot;Dotty Sachet&quot; but name, quantity, and total are all unclear. Needs paper original.</td>
+</tr>
+<tr>
+<td>WA0035 (Brookside Dairy, handwritten slip)</td>
+<td>All values uncertain — handwritten slip with poor legibility. Needs paper original reviewed in person.</td>
+</tr>
+</tbody></table>
+<hr>
+<h3>FLAG 7: ITEMS REQUIRING PRODUCT CATEGORY CONFIRMATION</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Question</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MK Electronics items (Section 25)</td>
+<td>Is Mabruk Shop selling phone accessories as a regular product line? Confirm before creating an Electronics category in the system.</td>
+</tr>
+<tr>
+<td>Cheese &quot;140x48&quot; from Gorgor Wholesalers</td>
+<td>Product description on receipt is ambiguous — interpreted as Chef processed cheese slices (48 per pack). Confirm exact product name and SKU.</td>
+</tr>
+<tr>
+<td>&quot;Fresh 2.5KGS&quot; from Amana General Store</td>
+<td>Likely Hilwa Fresh Milk — confirm and assign to correct product in Section 6.</td>
+</tr>
+<tr>
+<td>KSL Tropical (12x1KG and 12x500G)</td>
+<td>Product type unconfirmed — possibly coconut-based product or flavoring. Confirm before assigning to a category.</td>
+</tr>
+<tr>
+<td>American Dream</td>
+<td>Listed under hair/personal care based on context but product type unconfirmed.</td>
+</tr>
+</tbody></table>
+<hr>
+<p><em>End of document. This catalog is for reference and verification purposes only. No stock has been seeded into the system as of the document generation date.</em></p>
+
+  </main>
+
+</div>
+
+</body>
+</html>
