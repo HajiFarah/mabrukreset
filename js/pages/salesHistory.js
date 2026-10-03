@@ -24,6 +24,12 @@ function productSize(product) {
   return [product.size_value, product.size_unit].filter((v) => v !== null && v !== '').join(' ');
 }
 
+function saleCost(sale) {
+  return (sale.sale_items ?? []).reduce((sum, item) => {
+    return sum + Number(item.unit_cost || 0) * Number(item.qty || 0);
+  }, 0);
+}
+
 function saleProfit(sale) {
   return (sale.sale_items ?? []).reduce((sum, item) => {
     return sum + (Number(item.unit_price || 0) - Number(item.unit_cost || 0)) * Number(item.qty || 0);
@@ -33,10 +39,10 @@ function saleProfit(sale) {
 function paymentMethod(sale) {
   const cash = Number(sale.paid_cash || 0);
   const mpesa = Number(sale.paid_mpesa || 0);
-  if (cash > 0 && mpesa > 0) return 'Split';
-  if (cash > 0) return 'Cash';
-  if (mpesa > 0) return 'M-Pesa';
-  return '—';
+  if (cash > 0 && mpesa > 0) return '<span class="method-badge method-split">Split</span>';
+  if (cash > 0) return '<span class="method-badge method-cash">Cash</span>';
+  if (mpesa > 0) return '<span class="method-badge method-mpesa">M-Pesa</span>';
+  return '<span class="method-badge">—</span>';
 }
 
 export async function renderHistory() {
@@ -85,6 +91,7 @@ export async function renderHistory() {
     const rows = sales.length ? sales.map((sale) => {
       const items = sale.sale_items ?? [];
       const saleProfitAmount = saleProfit(sale);
+      const saleCostAmount = saleCost(sale);
       const summary = items.length
         ? `${escapeHtml(items[0].product_name || 'Product')}${items.length > 1 ? ` and ${items.length - 1} more` : ''}`
         : '—';
@@ -100,18 +107,22 @@ export async function renderHistory() {
         sale.has_return ? '<span class="badge badge-amber">↩ Returned/Swapped</span>' : '',
         isCredit ? `<button type="button" class="btn btn-green btn-sm" data-action="settle" data-id="${escapeHtml(sale.id)}">Settle</button>` : '',
       ].filter(Boolean).join(' ');
+      const clientCell = sale.client_name
+        ? escapeHtml(sale.client_name)
+        : '<span class="walkin-label">Walk-in</span>';
       return `<tr class="history-sale-row${isCredit ? ' row-credit-outstanding' : ''}" data-sale-id="${escapeHtml(sale.id)}" tabindex="0">
-        <td>${dateTime(sale.created_at)}</td>
-        <td>${escapeHtml(sale.client_name || 'Walk-in')}</td>
-        <td>${summary}</td>
-        <td>${fmtKES(sale.total)}</td>
+        <td class="cell-date">${dateTime(sale.created_at)}</td>
+        <td>${clientCell}</td>
+        <td class="cell-summary">${summary}</td>
+        <td class="cell-money cell-total">${fmtKES(sale.total)}</td>
+        <td class="cell-money cell-cost">${fmtKES(saleCostAmount)}</td>
         <td>${paymentMethod(sale)}</td>
-        <td>${fmtKES(paid)}</td>
-        <td>${balanceCell}</td>
-        <td class="${saleProfitAmount >= 0 ? 'profit-positive' : 'profit-negative'}">${fmtKES(saleProfitAmount)}</td>
+        <td class="cell-money">${fmtKES(paid)}</td>
+        <td class="cell-money">${balanceCell}</td>
+        <td class="cell-money ${saleProfitAmount >= 0 ? 'profit-positive' : 'profit-negative'}">${fmtKES(saleProfitAmount)}</td>
         <td>${tags}</td>
       </tr>`;
-    }).join('') : '<tr><td colspan="9">No sales found for this period.</td></tr>';
+    }).join('') : '<tr><td colspan="10">No sales found for this period.</td></tr>';
 
     const periodButtons = [
       ['today', 'Today'],
@@ -133,7 +144,7 @@ export async function renderHistory() {
         <article class="card history-top-products"><h2>Top 5 products</h2>${chart}</article>
       </section>
       <div class="table-scroll"><table class="data-table history-table">
-        <thead><tr><th>Date/Time</th><th>Client</th><th>Items summary</th><th>Total</th><th>Method</th><th>Paid</th><th>Balance</th><th>Profit</th><th>Tags</th></tr></thead>
+        <thead><tr><th>Date/Time</th><th>Client</th><th>Items summary</th><th>Total</th><th>Cost</th><th>Method</th><th>Paid</th><th>Balance</th><th>Profit</th><th>Tags</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`;
 
@@ -242,18 +253,23 @@ export async function renderHistory() {
       return;
     }
     const items = sale.sale_items ?? [];
-    const rows = items.map((item) => `<tr>
-      <td>${escapeHtml(item.product_name || 'Product')}</td>
-      <td>${escapeHtml(item.qty)}</td>
-      <td>${escapeHtml(item.unit_sold)}</td>
-      <td>${fmtKES(item.unit_price)}</td>
-      <td>${fmtKES(item.line_total)}</td>
-    </tr>`).join('');
+    const rows = items.map((item) => {
+      const itemProfit = (Number(item.unit_price || 0) - Number(item.unit_cost || 0)) * Number(item.qty || 0);
+      return `<tr>
+        <td>${escapeHtml(item.product_name || 'Product')}</td>
+        <td>${escapeHtml(item.qty)}</td>
+        <td>${escapeHtml(item.unit_sold)}</td>
+        <td class="cell-money">${fmtKES(item.unit_price)}</td>
+        <td class="cell-money cell-cost">${fmtKES(item.unit_cost)}</td>
+        <td class="cell-money cell-total">${fmtKES(item.line_total)}</td>
+        <td class="cell-money ${itemProfit >= 0 ? 'profit-positive' : 'profit-negative'}">${fmtKES(itemProfit)}</td>
+      </tr>`;
+    }).join('');
     openModal(`<section class="sale-detail-modal">
       <h2>Sale Details</h2>
       <p>${dateTime(sale.created_at)}</p>
       <p>${escapeHtml(sale.client_name || 'Walk-in')} · ${escapeHtml(sale.client_phone || 'No phone')}</p>
-      <table class="data-table"><thead><tr><th>Product</th><th>Qty</th><th>Unit</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="data-table"><thead><tr><th>Product</th><th>Qty</th><th>Unit</th><th>Sell Price</th><th>Cost</th><th>Total</th><th>Profit</th></tr></thead><tbody>${rows}</tbody></table>
       <div class="sale-detail-totals">
         <p>Sale Total: ${fmtKES(sale.total)}</p>
         <p>Paid: ${fmtKES(sale.paid_cash)} cash + ${fmtKES(sale.paid_mpesa)} M-Pesa</p>

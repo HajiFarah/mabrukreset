@@ -4,10 +4,10 @@ import { today } from '../utils.js';
 const endOfDay = (date) => `${date}T23:59:59`;
 
 export async function getFinancialSummary(from, to) {
-  const [salesResult, itemsResult, returnsResult] = await Promise.all([
+  const [salesResult, itemsResult, returnsResult, creditResult] = await Promise.all([
     db
       .from('sales')
-      .select('total, paid_cash, paid_mpesa, balance, status')
+      .select('total, paid_cash, paid_mpesa')
       .gte('created_at', from)
       .lte('created_at', endOfDay(to)),
     db
@@ -20,9 +20,15 @@ export async function getFinancialSummary(from, to) {
       .select('cash_in, cash_out')
       .gte('created_at', from)
       .lte('created_at', endOfDay(to)),
+    // Outstanding credit is all-time — not period-filtered
+    db
+      .from('sales')
+      .select('balance')
+      .eq('status', 'credit')
+      .gt('balance', 0),
   ]);
 
-  const error = salesResult.error || itemsResult.error || returnsResult.error || null;
+  const error = salesResult.error || itemsResult.error || returnsResult.error || creditResult.error || null;
   if (error) console.error('[getFinancialSummary]', error);
   const sales = salesResult.data ?? [];
   const saleItems = itemsResult.data ?? [];
@@ -35,8 +41,8 @@ export async function getFinancialSummary(from, to) {
   );
   const cashIn = returns.reduce((sum, item) => sum + Number(item.cash_in || 0), 0);
   const cashOut = returns.reduce((sum, item) => sum + Number(item.cash_out || 0), 0);
-  const outstandingCredit = sales.reduce(
-    (sum, sale) => sum + (sale.status === 'credit' ? Number(sale.balance || 0) : 0),
+  const outstandingCredit = (creditResult.data ?? []).reduce(
+    (sum, sale) => sum + Number(sale.balance || 0),
     0,
   );
 

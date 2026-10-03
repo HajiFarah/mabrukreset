@@ -82,15 +82,18 @@ export async function renderFinancial() {
     if (!closings.length) return '<p>No closing history yet.</p>';
     const rows = closings.map((closing) => `<tr>
       <td>${escapeHtml(closing.closing_date)}</td>
-      <td>${fmtKES(closing.expected_cash)}</td>
-      <td>${fmtKES(closing.actual_cash)}</td>
-      <td class="${diffClass(closing.diff_cash)}">${fmtKES(closing.diff_cash)}</td>
-      <td>${fmtKES(closing.expected_mpesa)}</td>
-      <td>${fmtKES(closing.actual_mpesa)}</td>
-      <td class="${diffClass(closing.diff_mpesa)}">${fmtKES(closing.diff_mpesa)}</td>
-      <td>${dateTime(closing.closed_at)}</td>
+      <td class="cell-money">${fmtKES(closing.system_sales)}</td>
+      <td class="cell-money">${fmtKES(closing.system_cogs)}</td>
+      <td class="cell-money ${Number(closing.system_profit || 0) >= 0 ? 'profit-positive' : 'profit-negative'}">${fmtKES(closing.system_profit)}</td>
+      <td class="cell-money">${fmtKES(closing.expected_cash)}</td>
+      <td class="cell-money">${fmtKES(closing.actual_cash)}</td>
+      <td class="cell-money ${diffClass(closing.diff_cash)}">${fmtKES(closing.diff_cash)}</td>
+      <td class="cell-money">${fmtKES(closing.expected_mpesa)}</td>
+      <td class="cell-money">${fmtKES(closing.actual_mpesa)}</td>
+      <td class="cell-money ${diffClass(closing.diff_mpesa)}">${fmtKES(closing.diff_mpesa)}</td>
+      <td class="cell-date">${dateTime(closing.closed_at)}</td>
     </tr>`).join('');
-    return `<div class="table-scroll"><table class="data-table"><thead><tr><th>Date</th><th>Exp Cash</th><th>Act Cash</th><th>Cash Diff</th><th>Exp M-Pesa</th><th>Act M-Pesa</th><th>MPesa Diff</th><th>Closed At</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<div class="table-scroll"><table class="data-table closing-history-table"><thead><tr><th>Date</th><th>Sales</th><th>COGS</th><th>Profit</th><th>Exp Cash</th><th>Act Cash</th><th>Cash Diff</th><th>Exp M-Pesa</th><th>Act M-Pesa</th><th>MPesa Diff</th><th>Closed At</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
   function renderPage() {
@@ -128,7 +131,7 @@ export async function renderFinancial() {
         <article class="card"><h2>Total Revenue</h2><p>${fmtKES(summary.revenue)}</p></article>
         <article class="card"><h2>COGS</h2><p>${fmtKES(summary.cogs)}</p></article>
         <article class="card"><h2>Net Profit</h2><p>${fmtKES(summary.profit)}</p></article>
-        <article class="card"><h2>Outstanding Credit</h2><p>${fmtKES(summary.outstandingCredit)}</p></article>
+        <article class="card"><h2>Outstanding Credit</h2><p>${fmtKES(summary.outstandingCredit)}</p><small>All unpaid balances</small></article>
       </section>
       <section class="card financial-chart-card"><h2>Daily Revenue and Profit</h2>${renderChart()}</section>
       <section class="card day-closing-section">

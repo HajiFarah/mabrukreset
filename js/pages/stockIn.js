@@ -18,11 +18,24 @@ function mkRow(overrides = {}) {
     name: '',
     qty: '',
     ppc: '',          // pieces per carton (carton only)
+    bpc: '',          // boxes per carton (carton_box only)
+    ppb: '',          // pieces per box (carton_box only)
+    tpc: '',          // trays per crate (crate only)
+    ppt: '',          // pieces per tray (crate only)
+    rcvUnit: 'crate', // receiving unit for crate: 'crate' | 'tray'
+    bagSize: '',      // weight or volume per bag (bag only)
     size_value: '',
     size_unit: 'g',
     cost: '',         // cost/carton for carton; cost/unit for others
+    costKg: '',       // cost/kg or cost/L (bag only)
+    costBox: '',      // cost per box (carton_box only)
+    costPc: '',       // cost per piece (carton_box only)
+    costTray: '',     // cost per tray auto-display (crate only)
     sell: '',         // sell/piece for carton; sell/unit for others
     sellC: '',        // sell/carton for carton only (bidirectional with sell)
+    sellBox: '',      // sell per box (carton_box only)
+    sellTray: '',     // sell per tray (crate only)
+    sellB: '',        // sell/bag for bag only (bidirectional with sell)
     ...overrides,
   };
 }
@@ -36,12 +49,19 @@ function escapeHtml(v) {
 const positive = (v) => Number.isFinite(Number(v)) && Number(v) > 0;
 const fmt2 = (n) => (Math.round(n * 100) / 100).toFixed(2);
 const numberDisplay = (v) => Number(v || 0).toLocaleString('en-KE', { maximumFractionDigits: 3 });
+function bagBaseUnit(row) {
+  return row.size_unit === 'kg' || row.size_unit === 'g' ? 'kg' : 'L';
+}
+function bagBase(row) {
+  const size = Number(row.bagSize || 0);
+  return row.size_unit === 'g' || row.size_unit === 'ml' ? size / 1000 : size;
+}
 
 function lineTotal(row) {
   const qty = Number(row.qty) || 0;
   const cost = Number(row.cost) || 0;
   if (!qty || !cost) return 0;
-  if (row.type === 'bag') return cost;       // cost = total bag cost already
+  if (row.type === 'bag') return qty * cost;
   if (row.type === 'carton') return qty * cost; // qty=cartons, cost=per carton
   return qty * cost;
 }
@@ -51,7 +71,21 @@ function profitHtml(row) {
   const sell = Number(row.sell) || 0;
   if (!cost || !sell) return '';
   let profitPerUnit, pctBase, label;
-  if (row.type === 'carton') {
+  if (row.type === 'carton_box') {
+    const ppc = Number(row.bpc) * Number(row.ppb);
+    if (!(ppc > 0)) return '';
+    const costPc = cost / ppc;
+    profitPerUnit = sell - costPc;
+    pctBase = costPc;
+    label = '/pc';
+  } else if (row.type === 'crate') {
+    const ppc = Number(row.tpc) * Number(row.ppt);
+    if (!(ppc > 0)) return '';
+    const costPc = cost / ppc;
+    profitPerUnit = sell - costPc;
+    pctBase = costPc;
+    label = '/pc';
+  } else if (row.type === 'carton' || row.type === 'dozen') {
     const ppc = Number(row.ppc) || 0;
     if (!ppc) return '';
     const costPc = cost / ppc;
@@ -59,12 +93,12 @@ function profitHtml(row) {
     pctBase = costPc;
     label = '/pc';
   } else if (row.type === 'bag') {
-    const qty = Number(row.qty) || 0;
-    if (!qty) return '';
-    const costKg = cost / qty;
-    profitPerUnit = sell - costKg;
-    pctBase = costKg;
-    label = '/kg';
+    const bagSize = bagBase(row);
+    if (bagSize <= 0) return '';
+    const costPerUnit = Number(row.cost) / bagSize;
+    profitPerUnit = sell - costPerUnit;
+    pctBase = costPerUnit;
+    label = `/${bagBaseUnit(row)}`;
   } else {
     profitPerUnit = sell - cost;
     pctBase = cost;
@@ -76,15 +110,43 @@ function profitHtml(row) {
 }
 
 function isRowEmpty(row) {
-  return !row.name.trim() && !row.qty && !row.cost && !row.sell;
+  return !row.name.trim() && !row.qty && !row.cost && !row.sell &&
+    (row.type !== 'bag' || (!row.bagSize && !row.costKg && !row.sellB)) &&
+    (row.type !== 'carton_box' || (!row.bpc && !row.ppb && !row.costBox && !row.costPc && !row.sellBox)) &&
+    (row.type !== 'crate'      || (!row.tpc && !row.ppt && !row.costTray && !row.sellTray)) &&
+    (row.type !== 'dozen'      || !row.ppc);
 }
 
 function validateRow(row) {
   if (isRowEmpty(row)) return null;
   if (!row.name.trim()) return 'Enter a product name.';
-  if (!positive(row.qty)) return `Enter qty for "${row.name}".`;
+  if (row.type === 'carton_box' && !positive(row.qty))
+    return `Enter number of cartons for "${row.name}".`;
+  if (!positive(row.qty)) return row.type === 'bag'
+    ? `Enter number of bags for "${row.name}".`
+    : `Enter qty for "${row.name}".`;
   if (row.type === 'carton' && !positive(row.ppc))
     return `Enter pieces per carton for "${row.name}".`;
+  if (row.type === 'carton_box' && !positive(row.bpc))
+    return `Enter boxes per carton for "${row.name}".`;
+  if (row.type === 'carton_box' && !positive(row.ppb))
+    return `Enter pieces per box for "${row.name}".`;
+  if (row.type === 'dozen' && !positive(row.ppc))
+    return `Enter pieces per dozen for "${row.name}".`;
+  if (row.type === 'crate' && !positive(row.tpc))
+    return `Enter trays per crate for "${row.name}".`;
+  if (row.type === 'crate' && !positive(row.ppt))
+    return `Enter pieces per tray for "${row.name}".`;
+  if (row.type === 'bag' && !positive(row.bagSize))
+    return `Enter size per bag for "${row.name}".`;
+  if (row.type === 'bag' && !positive(row.cost))
+    return `Enter cost per bag for "${row.name}".`;
+  if (row.type === 'bag' && !positive(row.sell))
+    return `Enter sell price per ${bagBaseUnit(row)} for "${row.name}".`;
+  if (row.type === 'carton_box' && !positive(row.cost))
+    return `Enter cost per carton for "${row.name}".`;
+  if (row.type === 'carton_box' && !positive(row.sell))
+    return `Enter sell price per piece for "${row.name}".`;
   if (!positive(row.cost)) return `Enter cost for "${row.name}".`;
   if (!positive(row.sell)) return `Enter sell price for "${row.name}".`;
   return null;
@@ -111,110 +173,191 @@ function buildPayloadItem(row) {
       carton_sell_price: sellCtn,
       stock_qty: qty * ppc };     // total pieces in stock
   }
+  if (row.type === 'carton_box') {
+    const bpc = Number(row.bpc);
+    const ppb = Number(row.ppb);
+    const ppc = bpc * ppb;
+    return { ...base, category: 'carton_box', packets_per_box: bpc,
+      pieces_per_box: ppb, pieces_per_carton: ppc,
+      cost_price: cost / ppc,
+      sell_price: sell,
+      box_sell_price: Number(row.sellBox) || sell * ppb,
+      carton_sell_price: Number(row.sellC) || sell * ppc,
+      stock_qty: qty * ppc };
+  }
   if (row.type === 'bag') {
-    const costPerKg = cost / qty;   // cost = total bag cost; qty = total kg → cost/kg
-    return { ...base, category: 'bag',
-      cost_price: costPerKg,      // per kg
-      sell_price: sell,           // per kg
-      stock_qty: qty };           // total kg
+    const bagSize = bagBase(row);
+    const costPerKg = cost / bagSize;
+    return { ...base, category: 'bag', size_value: null, size_unit: bagBaseUnit(row),
+      bag_weight: bagSize,
+      cost_price: costPerKg,
+      sell_price: sell,
+      bag_sell_price: Number(row.sellB) || sell * bagSize,
+      stock_qty: qty * bagSize };
+  }
+  if (row.type === 'dozen') {
+    const ppc = Number(row.ppc);
+    const costPerPiece = Number(row.cost) / ppc;
+    const sellDz = Number(row.sellC) || Number(row.sell) * ppc;
+    return { ...base, category: 'dozen', pieces_per_carton: ppc,
+      cost_price: costPerPiece,
+      sell_price: Number(row.sell),
+      carton_sell_price: sellDz,
+      stock_qty: Number(row.qty) * ppc };
+  }
+  if (row.type === 'crate') {
+    const tpc = Number(row.tpc);
+    const ppt = Number(row.ppt);
+    const ppc = tpc * ppt;
+    const isRecvTray = row.rcvUnit === 'tray';
+    // cost field = cost/tray when rcvUnit=tray, cost/crate when rcvUnit=crate
+    const costPerCrate = isRecvTray ? Number(row.cost) * tpc : Number(row.cost);
+    const costPerPiece = costPerCrate / ppc;
+    const stockPieces  = isRecvTray ? Number(row.qty) * ppt : Number(row.qty) * ppc;
+    const sellTrayVal  = Number(row.sellTray) || Number(row.sell) * ppt;
+    const sellCrateVal = Number(row.sellC) || Number(row.sell) * ppc;
+    return { ...base, category: 'crate',
+      packets_per_box: tpc,
+      pieces_per_box:  ppt,
+      pieces_per_carton: ppc,
+      cost_price: costPerPiece,
+      sell_price: Number(row.sell),
+      box_sell_price: sellTrayVal,
+      carton_sell_price: sellCrateVal,
+      stock_qty: stockPieces };
   }
   return null;
 }
 
 // ── Row HTML ──────────────────────────────────────────────────────────────────
-// Column order: Name | Type | Qty | Pcs/ctn | Size | Cost | Cost/pc | Sell/pc | Sell/ctn | Profit | ×
 function renderRowHtml(row) {
   const ev = escapeHtml;
   const attr = (x) => (x !== '' && x != null) ? ` value="${ev(x)}"` : '';
-  const isCarton = row.type === 'carton';
-  const isBag    = row.type === 'bag';
+  const isCarton    = row.type === 'carton';
+  const isCartonBox = row.type === 'carton_box';
+  const isBag       = row.type === 'bag';
+  const isCrate     = row.type === 'crate';
+  const isDozen     = row.type === 'dozen';
 
-  const typeOpts = ['pieces', 'carton', 'bag']
-    .map((t) => `<option value="${t}"${row.type === t ? ' selected' : ''}>${t.charAt(0).toUpperCase() + t.slice(1)}</option>`)
-    .join('');
+  const typeOpts = [
+    ['pieces', 'Pieces'],
+    ['carton', 'Carton'],
+    ['dozen', 'Dozen'],
+    ['bag', 'Bag'],
+    ['carton_box', 'Carton + boxes'],
+    ['crate', 'Crate'],
+  ].map(([val, label]) => `<option value="${val}"${row.type === val ? ' selected' : ''}>${ev(label)}</option>`).join('');
+
   const unitOpts = ['g', 'kg', 'ml', 'L']
     .map((u) => `<option value="${u}"${row.size_unit === u ? ' selected' : ''}>${u}</option>`)
     .join('');
 
-  // Qty label
-  const qtyLabel = isCarton ? 'Cartons' : isBag ? 'Kg' : 'Pieces';
+  const qtyLabel = isCrate
+    ? (row.rcvUnit === 'tray' ? 'Trays rcvd' : 'Crates rcvd')
+    : isCarton || isCartonBox ? 'Cartons'
+    : isDozen ? 'Dozens'
+    : isBag ? 'Bags'
+    : 'Pieces';
 
-  // Pcs/ctn column (carton only)
-  const ppcCell = isCarton
-    ? `<td class="col-ppc" data-label="Pcs/ctn">
-        <input type="number" name="ppc" min="1" step="1"${attr(row.ppc)} placeholder="0" aria-label="Pieces per carton">
-       </td>`
-    : `<td class="col-ppc col-dim" data-label="Pcs/ctn"><span class="dim-dash">—</span></td>`;
+  const field = (label, control, widthClass = '') => `<label class="row-card-field${widthClass ? ` ${widthClass}` : ''}"><small class="cell-hint">${ev(label)}</small>${control}</label>`;
+  const qtyField = field(qtyLabel, `<input type="number" name="qty" min="0.001" step="any"${attr(row.qty)} placeholder="0" aria-label="${ev(qtyLabel)}">`);
+  const pieceSizeFields = field('Piece size', `<div class="size-pair">
+    <input type="number" name="size_value" min="0.001" step="any"${attr(row.size_value)} placeholder="—" aria-label="${isCarton ? 'Piece size' : 'Size'}">
+    <select name="size_unit" aria-label="Unit">${unitOpts}</select>
+  </div>`, 'row-card-field-size');
+  const bagSizeFields = field('Size/bag', `<div class="size-pair">
+    <input type="number" name="bagSize" min="0.001" step="any"${attr(row.bagSize)} placeholder="0" aria-label="Size per bag">
+    <select name="size_unit" aria-label="Bag unit">
+      <option value="kg"${row.size_unit === 'kg' ? ' selected' : ''}>kg</option>
+      <option value="g"${row.size_unit === 'g' ? ' selected' : ''}>g</option>
+      <option value="L"${row.size_unit === 'L' ? ' selected' : ''}>L</option>
+      <option value="ml"${row.size_unit === 'ml' ? ' selected' : ''}>ml</option>
+    </select>
+  </div>`, 'row-card-field-size');
 
-  // Cost column label
-  const costLabel = isCarton ? 'Cost/ctn' : isBag ? 'Total cost' : 'Cost/pc';
-
-  // Cost/pc or Cost/kg — auto-filled for carton and bag
-  const ppc = Number(row.ppc) || 0;
-  let costPcCell = '';
-  if (isCarton) {
-    const costPcVal = ppc && row.cost !== '' ? fmt2(Number(row.cost) / ppc) : '';
-    costPcCell = `<td class="col-cost-pc" data-label="Cost/pc">
-      <small class="cell-hint">Cost/pc</small>
-      <input type="number" name="cost_pc" class="auto-field" readonly tabindex="-1"${costPcVal ? ` value="${ev(costPcVal)}"` : ''} placeholder="—" aria-label="Cost per piece (auto)">
-    </td>`;
-  } else if (isBag) {
-    const qty = Number(row.qty) || 0;
-    const costKgVal = qty && row.cost !== '' ? fmt2(Number(row.cost) / qty) : '';
-    costPcCell = `<td class="col-cost-pc" data-label="Cost/kg">
-      <small class="cell-hint">Cost/kg</small>
-      <input type="number" name="cost_pc" class="auto-field" readonly tabindex="-1"${costKgVal ? ` value="${ev(costKgVal)}"` : ''} placeholder="—" aria-label="Cost per kg (auto)">
-    </td>`;
+  let receivedFields;
+  if (isBag) {
+    receivedFields = `${qtyField}${bagSizeFields}`;
+  } else if (isCartonBox) {
+    receivedFields = `${qtyField}${field('Boxes/ctn', `<input type="number" name="bpc" min="1" step="1"${attr(row.bpc)} placeholder="0" aria-label="Boxes per carton">`, 'row-card-field-narrow')}${field('Pcs/box', `<input type="number" name="ppb" min="1" step="1"${attr(row.ppb)} placeholder="0" aria-label="Pieces per box">`, 'row-card-field-narrow')}${pieceSizeFields}`;
+  } else if (isCrate) {
+    const rcvUnitField = field('Rcv in', `<select name="rcvUnit" aria-label="Receiving unit">
+      <option value="crate"${row.rcvUnit === 'crate' ? ' selected' : ''}>Crates</option>
+      <option value="tray"${row.rcvUnit === 'tray' ? ' selected' : ''}>Trays</option>
+    </select>`);
+    receivedFields = `${rcvUnitField}${qtyField}${field('Trays/crate', `<input type="number" name="tpc" min="1" step="1"${attr(row.tpc)} placeholder="0" aria-label="Trays per crate">`, 'row-card-field-narrow')}${field('Pcs/tray', `<input type="number" name="ppt" min="1" step="1"${attr(row.ppt)} placeholder="0" aria-label="Pieces per tray">`, 'row-card-field-narrow')}${pieceSizeFields}`;
+  } else if (isCarton) {
+    receivedFields = `${qtyField}${field('Pcs/carton', `<input type="number" name="ppc" min="1" step="1"${attr(row.ppc)} placeholder="0" aria-label="Pieces per carton">`, 'row-card-field-narrow')}${pieceSizeFields}`;
+  } else if (isDozen) {
+    receivedFields = `${qtyField}${field('Pcs/dozen', `<input type="number" name="ppc" min="1" step="1"${attr(row.ppc)} placeholder="12" aria-label="Pieces per dozen">`, 'row-card-field-narrow')}${pieceSizeFields}`;
   } else {
-    costPcCell = `<td class="col-cost-pc col-dim" data-label="Cost/pc"><span class="dim-dash">—</span></td>`;
+    receivedFields = `${qtyField}${pieceSizeFields}`;
   }
 
-  // Sell label
-  const sellPcLabel = isCarton ? 'Sell/pc' : isBag ? 'Sell/kg' : 'Sell/pc';
+  const ppc = Number(row.ppc) || 0;
+  const costLabel = isCrate
+    ? (row.rcvUnit === 'tray' ? 'Cost/tray' : 'Cost/crate')
+    : isCarton || isCartonBox ? 'Cost/ctn'
+    : isDozen ? 'Cost/dozen'
+    : isBag ? 'Cost/bag'
+    : 'Cost/pc';
+  let costFields = field(costLabel, `<input type="number" name="cost" min="0.01" step="0.01"${attr(row.cost)} placeholder="0.00" aria-label="${ev(costLabel)}">`);
+  if (isCarton || isDozen) {
+    const costPcVal = ppc && row.cost !== '' ? fmt2(Number(row.cost) / ppc) : '';
+    costFields += field('Cost/pc', `<input type="number" name="cost_pc" class="auto-field" readonly tabindex="-1"${costPcVal ? ` value="${ev(costPcVal)}"` : ''} placeholder="—" aria-label="Cost per piece (auto)">`);
+  } else if (isBag) {
+    const costUnit = bagBaseUnit(row);
+    costFields += field(`Cost/${costUnit}`, `<input type="number" name="costKg" min="0.01" step="0.01"${attr(row.costKg)} placeholder="0.00" aria-label="Cost per ${costUnit}">`);
+  } else if (isCartonBox) {
+    costFields += field('Cost/box', `<input type="number" name="costBox" min="0.01" step="0.01"${attr(row.costBox)} placeholder="0.00" aria-label="Cost per box">`);
+    costFields += field('Cost/pc', `<input type="number" name="costPc" min="0.01" step="0.01"${attr(row.costPc)} placeholder="0.00" aria-label="Cost per piece">`);
+  } else if (isCrate) {
+    const tpc = Number(row.tpc) || 0;
+    const ppt = Number(row.ppt) || 0;
+    const ppcCrate = tpc * ppt;
+    const otherLabel = row.rcvUnit === 'tray' ? 'Cost/crate' : 'Cost/tray';
+    const otherVal = row.rcvUnit === 'tray'
+      ? (tpc && row.cost !== '' ? fmt2(Number(row.cost) * tpc) : '')
+      : (tpc && row.cost !== '' ? fmt2(Number(row.cost) / tpc) : '');
+    const costPcVal = ppcCrate && row.cost !== ''
+      ? (row.rcvUnit === 'tray' ? fmt2(Number(row.cost) / ppt) : fmt2(Number(row.cost) / ppcCrate))
+      : '';
+    costFields += field(otherLabel, `<input type="number" name="costTray" class="auto-field" readonly tabindex="-1"${otherVal ? ` value="${ev(otherVal)}"` : ''} placeholder="—" aria-label="${ev(otherLabel)} (auto)">`);
+    costFields += field('Cost/pc', `<input type="number" name="cost_pc" class="auto-field" readonly tabindex="-1"${costPcVal ? ` value="${ev(costPcVal)}"` : ''} placeholder="—" aria-label="Cost per piece (auto)">`);
+  }
 
-  // Sell/ctn column (carton only)
-  let sellCtnCell = '';
+  const unitLabel = isBag ? bagBaseUnit(row) : 'pc';
+  let sellFields = field(`Sell/${unitLabel}`, `<input type="number" name="sell" min="0.01" step="0.01"${attr(row.sell)} placeholder="0.00" aria-label="${isBag ? `Sell/${unitLabel}` : 'Sell/pc'}">`);
   if (isCarton) {
-    sellCtnCell = `<td class="col-sell-ctn" data-label="Sell/ctn">
-      <input type="number" name="sellC" min="0.01" step="0.01"${attr(row.sellC)} placeholder="0.00" aria-label="Sell price per carton">
-    </td>`;
-  } else {
-    sellCtnCell = `<td class="col-sell-ctn col-dim" data-label="Sell/ctn"><span class="dim-dash">—</span></td>`;
+    sellFields += field('Sell/ctn', `<input type="number" name="sellC" min="0.01" step="0.01"${attr(row.sellC)} placeholder="0.00" aria-label="Sell price per carton">`);
+  } else if (isDozen) {
+    sellFields += field('Sell/dozen', `<input type="number" name="sellC" min="0.01" step="0.01"${attr(row.sellC)} placeholder="0.00" aria-label="Sell price per dozen">`);
+  } else if (isBag) {
+    sellFields += field('Sell/bag', `<input type="number" name="sellB" min="0.01" step="0.01"${attr(row.sellB)} placeholder="0.00" aria-label="Sell price per bag">`);
+  } else if (isCartonBox) {
+    sellFields += field('Sell/box', `<input type="number" name="sellBox" min="0.01" step="0.01"${attr(row.sellBox)} placeholder="0.00" aria-label="Sell price per box">`);
+    sellFields += field('Sell/ctn', `<input type="number" name="sellC" min="0.01" step="0.01"${attr(row.sellC)} placeholder="0.00" aria-label="Sell price per carton">`);
+  } else if (isCrate) {
+    sellFields += field('Sell/tray', `<input type="number" name="sellTray" min="0.01" step="0.01"${attr(row.sellTray)} placeholder="0.00" aria-label="Sell price per tray">`);
+    sellFields += field('Sell/crate', `<input type="number" name="sellC" min="0.01" step="0.01"${attr(row.sellC)} placeholder="0.00" aria-label="Sell price per crate">`);
   }
 
   return `<tr data-row-id="${ev(row.id)}" data-type="${ev(row.type)}">
-    <td class="col-name" data-label="Name">
-      <input type="text" name="name" placeholder="Product name" autocomplete="off"${attr(row.name)}>
-    </td>
-    <td class="col-type" data-label="Type">
-      <select name="type" aria-label="Type">${typeOpts}</select>
-    </td>
-    <td class="col-qty" data-label="${ev(qtyLabel)}">
-      <small class="cell-hint">${ev(qtyLabel)}</small>
-      <input type="number" name="qty" min="0.001" step="any"${attr(row.qty)} placeholder="0" aria-label="${ev(qtyLabel)}">
-    </td>
-    ${ppcCell}
-    ${isBag
-      ? `<td class="col-size col-dim" data-label="Size"><span class="dim-dash">—</span></td>`
-      : `<td class="col-size" data-label="${isCarton ? 'Piece size' : 'Size'}">
-           <div class="size-pair">
-             <input type="number" name="size_value" min="0.001" step="any"${attr(row.size_value)} placeholder="—" aria-label="${isCarton ? 'Piece size' : 'Size'}">
-             <select name="size_unit" aria-label="Unit">${unitOpts}</select>
-           </div>
-         </td>`
-    }
-    <td class="col-cost" data-label="${ev(costLabel)}">
-      <small class="cell-hint">${ev(costLabel)}</small>
-      <input type="number" name="cost" min="0.01" step="0.01"${attr(row.cost)} placeholder="0.00" aria-label="${ev(costLabel)}">
-    </td>
-    ${costPcCell}
-    <td class="col-sell" data-label="${ev(sellPcLabel)}">
-      <small class="cell-hint">${ev(sellPcLabel)}</small>
-      <input type="number" name="sell" min="0.01" step="0.01"${attr(row.sell)} placeholder="0.00" aria-label="${ev(sellPcLabel)}">
-    </td>
-    ${sellCtnCell}
-    <td class="col-profit" data-label="Profit">${profitHtml(row)}</td>
-    <td class="col-remove"><button type="button" class="btn-row-remove" tabindex="-1" aria-label="Remove row">×</button></td>
+    <td colspan="1" class="row-card-cell"><div class="row-card">
+      <div class="row-card-head">
+        <div class="col-name"><label class="row-card-field"><small class="cell-hint">Product name</small><input type="text" name="name" placeholder="Product name" autocomplete="off"${attr(row.name)}></label></div>
+        <label class="col-type row-card-field"><small class="cell-hint">Type</small><select name="type" aria-label="Type">${typeOpts}</select></label>
+        <div class="col-profit">${profitHtml(row)}</div>
+        <div class="col-remove"><button type="button" class="btn-row-remove" tabindex="-1" aria-label="Remove row">×</button></div>
+      </div>
+      <div class="row-match-banner" role="status"></div>
+      <div class="row-summary" aria-label="Collapsed row summary"></div>
+      <div class="row-card-blocks">
+        <section class="row-card-block"><h3>Received</h3><div class="row-card-fields">${receivedFields}</div></section>
+        <section class="row-card-block"><h3>Cost</h3><div class="row-card-fields">${costFields}</div></section>
+        <section class="row-card-block"><h3>Sell</h3><div class="row-card-fields">${sellFields}</div></section>
+      </div>
+    </div></td>
   </tr>`;
 }
 
@@ -254,34 +397,6 @@ export async function renderStockIn() {
 
       <div class="receipt-table-wrap">
         <table class="receipt-table">
-          <colgroup>
-            <col class="col-name">
-            <col class="col-type">
-            <col class="col-qty">
-            <col class="col-ppc">
-            <col class="col-size">
-            <col class="col-cost">
-            <col class="col-cost-pc">
-            <col class="col-sell">
-            <col class="col-sell-ctn">
-            <col class="col-profit">
-            <col class="col-remove">
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Product name</th>
-              <th>Type</th>
-              <th>Qty</th>
-              <th>Pcs/ctn</th>
-              <th>Piece size</th>
-              <th>Cost</th>
-              <th>Cost/unit</th>
-              <th>Sell</th>
-              <th>Sell/ctn</th>
-              <th>Profit</th>
-              <th></th>
-            </tr>
-          </thead>
           <tbody id="receipt-tbody"></tbody>
         </table>
       </div>
@@ -300,41 +415,66 @@ export async function renderStockIn() {
 
   // ── Existing product match ───────────────────────────────────────────────
 
+  const _norm = {
+    name: (s) => (s ?? '').trim().replace(/\s+/g, ' ').toLowerCase(),
+    cat:  (s) => (s ?? '').trim().toLowerCase(),
+    unit: (s) => (s ?? '').trim().toLowerCase() || null,
+    size: (v) => (v === '' || v == null || Number.isNaN(Number(v))) ? null : Number(v),
+  };
+
   function findExisting(row) {
-    const normName = (s) => (s ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
-    const normCat = (s) => (s ?? '').trim().toLowerCase();
-    const normUnit = (s) => (s ?? '').trim().toLowerCase() || null;
-    const normSize = (v) => (v === '' || v == null || Number.isNaN(Number(v))) ? null : Number(v);
-    const rowName = normName(row.name);
-    const rowCat = normCat(row.type);
+    const rowName = _norm.name(row.name);
+    const rowCat  = _norm.cat(row.type);
     if (!rowName || !existingProducts) return null;
-    if (row.size_value !== '' && row.size_value != null && Number.isNaN(Number(row.size_value))) return null;
-    const rowSize = normSize(row.size_value);
-    const rowUnit = normUnit(row.size_unit);
+    if (row.type !== 'bag' && row.size_value !== '' && row.size_value != null && Number.isNaN(Number(row.size_value))) return null;
+    const rowSize = row.type === 'bag' ? null : _norm.size(row.size_value);
+    const rowUnit = _norm.unit(row.type === 'bag' ? bagBaseUnit(row) : row.size_unit);
     return existingProducts.find((p) =>
-      normName(p.name) === rowName &&
-      normCat(p.category) === rowCat &&
-      normSize(p.size_value) === rowSize &&
-      normUnit(p.size_unit) === rowUnit
+      _norm.name(p.name) === rowName &&
+      _norm.cat(p.category) === rowCat &&
+      _norm.size(p.size_value) === rowSize &&
+      _norm.unit(p.size_unit) === rowUnit
     ) ?? null;
+  }
+
+  // Looser match: name + category only (catches same product before size is filled in)
+  function findSimilar(row) {
+    const rowName = _norm.name(row.name);
+    const rowCat  = _norm.cat(row.type);
+    if (!rowName || !existingProducts) return [];
+    return existingProducts.filter((p) =>
+      _norm.name(p.name) === rowName &&
+      _norm.cat(p.category) === rowCat
+    );
   }
 
   function updateExistingNotice(row) {
     const tr = tbody.querySelector(`tr[data-row-id="${row.id}"]`);
     if (!tr) return;
-    let notice = tr.querySelector('.row-existing-notice');
-    const match = findExisting(row);
-    if (match) {
-      const stockUnit = match.category === 'bag' ? 'kg' : 'pcs';
-      if (!notice) {
-        notice = document.createElement('p');
-        notice.className = 'row-existing-notice';
-        tr.querySelector('.col-name').appendChild(notice);
-      }
-      notice.textContent = `Already in stock: ${numberDisplay(match.stock_qty)} ${stockUnit}; stock will be combined and this supplier gets their own receipt.`;
-    } else if (notice) {
-      notice.remove();
+    const banner = tr.querySelector('.row-match-banner');
+    if (!banner) return;
+
+    const exact = findExisting(row);
+    if (exact) {
+      const stockUnit = exact.category === 'bag' ? (exact.size_unit || 'kg') : 'pcs';
+      const sizeLabel = exact.size_value ? ` ${numberDisplay(exact.size_value)}${exact.size_unit || ''}` : '';
+      banner.className = 'row-match-banner row-match-exact';
+      banner.innerHTML = `<span class="match-icon">✓</span><span><strong>${escapeHtml(exact.name)}${escapeHtml(sizeLabel)}</strong> is already in stock — <strong>${numberDisplay(exact.stock_qty)} ${stockUnit}</strong> on hand. Qty will be added and prices updated.</span>`;
+      return;
     }
+
+    const similar = findSimilar(row);
+    if (similar.length > 0) {
+      const m = similar[0];
+      const sizeLabel = m.size_value ? `${numberDisplay(m.size_value)}${m.size_unit || ''}` : '';
+      const stockUnit = m.category === 'bag' ? (m.size_unit || 'kg') : 'pcs';
+      banner.className = 'row-match-banner row-match-fuzzy';
+      banner.innerHTML = `<span class="match-icon">~</span><span>Similar product exists: <strong>${escapeHtml(m.name)}${sizeLabel ? ` (${escapeHtml(sizeLabel)})` : ''}</strong> · ${numberDisplay(m.stock_qty)} ${stockUnit} in stock. Fill in the size to confirm a match.</span>`;
+      return;
+    }
+
+    banner.className = 'row-match-banner';
+    banner.innerHTML = '';
   }
 
   // ── DOM helpers ──────────────────────────────────────────────────────────
@@ -364,14 +504,50 @@ export async function renderStockIn() {
     // Cost/pc or Cost/kg (auto-filled)
     const costPcInput = tr.querySelector('[name="cost_pc"]');
     if (costPcInput) {
-      if (row.type === 'carton') {
+      if (row.type === 'carton' || row.type === 'dozen') {
         const ppc = Number(row.ppc) || 0;
         const cost = Number(row.cost) || 0;
         costPcInput.value = ppc && cost ? fmt2(cost / ppc) : '';
-      } else if (row.type === 'bag') {
-        const qty = Number(row.qty) || 0;
-        const cost = Number(row.cost) || 0;
-        costPcInput.value = qty && cost ? fmt2(cost / qty) : '';
+      }
+    }
+
+    if (row.type === 'bag') {
+      const costInput = tr.querySelector('[name="cost"]');
+      if (costInput && document.activeElement !== costInput) costInput.value = row.cost;
+      const costKgInput = tr.querySelector('[name="costKg"]');
+      if (costKgInput && document.activeElement !== costKgInput) costKgInput.value = row.costKg;
+      const sellInput = tr.querySelector('[name="sell"]');
+      if (sellInput && document.activeElement !== sellInput) sellInput.value = row.sell;
+      const sellBInput = tr.querySelector('[name="sellB"]');
+      if (sellBInput && document.activeElement !== sellBInput) sellBInput.value = row.sellB;
+    }
+
+    if (row.type === 'carton_box') {
+      for (const name of ['cost', 'costBox', 'costPc', 'sell', 'sellBox', 'sellC']) {
+        const input = tr.querySelector(`[name="${name}"]`);
+        if (input && document.activeElement !== input) input.value = row[name];
+      }
+    }
+
+    if (row.type === 'crate') {
+      const tpc = Number(row.tpc) || 0;
+      const ppt = Number(row.ppt) || 0;
+      const ppc = tpc * ppt;
+      const cost = Number(row.cost) || 0;
+      const costTrayInput = tr.querySelector('[name="costTray"]');
+      if (costTrayInput) {
+        costTrayInput.value = tpc && cost
+          ? (row.rcvUnit === 'crate' ? fmt2(cost / tpc) : fmt2(cost * tpc))
+          : '';
+      }
+      if (costPcInput) {
+        costPcInput.value = ppc && cost
+          ? (row.rcvUnit === 'tray' ? fmt2(cost / ppt) : fmt2(cost / ppc))
+          : '';
+      }
+      for (const name of ['sell', 'sellTray', 'sellC']) {
+        const input = tr.querySelector(`[name="${name}"]`);
+        if (input && document.activeElement !== input) input.value = row[name] ?? '';
       }
     }
   }
@@ -389,7 +565,9 @@ export async function renderStockIn() {
     const seen = new Map();
     rows.forEach((row) => {
       if (isRowEmpty(row) || !row.name.trim()) return;
-      const key = `${row.name.trim().toLowerCase()}|${row.type}|${row.size_value ?? ''}|${row.size_unit}`;
+      const sizeKey = row.type === 'bag' ? '' : row.size_value;
+      const unitKey = row.type === 'bag' ? bagBaseUnit(row) : row.size_unit;
+      const key = `${row.name.trim().toLowerCase()}|${row.type}|${sizeKey ?? ''}|${unitKey}`;
       if (!seen.has(key)) seen.set(key, []);
       seen.get(key).push(row.id);
     });
@@ -404,12 +582,78 @@ export async function renderStockIn() {
     if (el) { el.textContent = ''; el.classList.add('hidden'); }
   }
 
+  function collapseRow(row) {
+    if (isRowEmpty(row) || validateRow(row) !== null) return;
+    const tr = tbody.querySelector(`tr[data-row-id="${row.id}"]`);
+    if (!tr) return;
+
+    let typeLabel = row.type.charAt(0).toUpperCase() + row.type.slice(1);
+    let receivedQty = Number(row.qty) || 0;
+    let receivedUnit = 'pcs';
+    if (row.type === 'carton') {
+      receivedQty *= Number(row.ppc) || 0;
+    } else if (row.type === 'carton_box') {
+      receivedQty *= (Number(row.bpc) || 0) * (Number(row.ppb) || 0);
+      typeLabel = 'Carton + boxes';
+    } else if (row.type === 'bag') {
+      receivedQty *= bagBase(row);
+      receivedUnit = bagBaseUnit(row);
+    } else if (row.type === 'dozen') {
+      receivedQty *= Number(row.ppc) || 0;
+      typeLabel = 'Dozen';
+    } else if (row.type === 'crate') {
+      const tpc = Number(row.tpc) || 0;
+      const ppt = Number(row.ppt) || 0;
+      receivedQty *= row.rcvUnit === 'tray' ? ppt : tpc * ppt;
+      typeLabel = 'Crate';
+    }
+
+    const summary = tr.querySelector('.row-summary');
+    if (!summary) return;
+    summary.innerHTML = `<span class="row-summary-name">${escapeHtml(row.name.trim())}</span><span class="row-summary-type">${escapeHtml(typeLabel)}</span><span class="row-summary-qty">${numberDisplay(receivedQty)} ${receivedUnit}</span><span class="row-summary-total">${fmtKES(lineTotal(row))}</span><span class="row-summary-profit">${profitHtml(row)}</span>`;
+    tr.classList.add('row-collapsed');
+  }
+
   function appendRow() {
-    rows.push(mkRow());
+    const lastRow = rows.at(-1);
+    const lastRowError = validateRow(lastRow);
+    if (isRowEmpty(lastRow) || lastRowError !== null) {
+      const tr = tbody.querySelector(`tr[data-row-id="${lastRow.id}"]`);
+      tr?.classList.add('row-error');
+      tr?.classList.remove('row-collapsed');
+
+      const requiredFields = ['name', 'qty'];
+      if (lastRow.type === 'carton') requiredFields.push('ppc');
+      if (lastRow.type === 'carton_box') requiredFields.push('bpc', 'ppb');
+      if (lastRow.type === 'bag') requiredFields.push('bagSize');
+      if (lastRow.type === 'dozen') requiredFields.push('ppc');
+      if (lastRow.type === 'crate') requiredFields.push('tpc', 'ppt');
+      requiredFields.push('cost', 'sell');
+      const firstInvalid = requiredFields.find((name) => name === 'name'
+        ? !lastRow.name.trim()
+        : !positive(lastRow[name]));
+      tr?.querySelector(`[name="${firstInvalid || 'name'}"]`)?.focus();
+      showToast('Finish this product first: ' + (lastRowError || 'fill in the product'), 'error');
+      return false;
+    }
+
+    const activeRow = document.activeElement?.closest?.('tr[data-row-id]');
+    const activeRowId = activeRow?.dataset.rowId;
+    rows.forEach((row) => {
+      if (row.id !== activeRowId && !isRowEmpty(row) && validateRow(row) === null) {
+        collapseRow(row);
+      }
+    });
+
+    const newRow = mkRow();
+    rows.push(newRow);
     const tmp = document.createElement('tbody');
-    tmp.innerHTML = renderRowHtml(rows.at(-1));
-    tbody.appendChild(tmp.firstElementChild);
+    tmp.innerHTML = renderRowHtml(newRow);
+    const newTr = tmp.firstElementChild;
+    tbody.appendChild(newTr);
     updateFooter();
+    newTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return true;
   }
 
   // ── Initial render ───────────────────────────────────────────────────────
@@ -422,13 +666,35 @@ export async function renderStockIn() {
     if (!tr) return;
     const row = rows.find((r) => r.id === tr.dataset.rowId);
     if (!row || !e.target.name) return;
+    const previousType = row.type;
     row[e.target.name] = e.target.value;
 
     if (e.target.name === 'type') {
+      if (row.type === 'bag') {
+        row.size_unit = 'kg';
+      } else if (previousType === 'bag') {
+        row.size_unit = 'g';
+      }
+      if (row.type === 'dozen' && !row.ppc) {
+        row.ppc = '12';
+      }
       // Full re-render — labels and extra columns change
       replaceRowDom(row);
       updateExistingNotice(row);
       tbody.querySelector(`tr[data-row-id="${row.id}"] [name="qty"]`)?.focus();
+    } else if (e.target.name === 'size_unit' && row.type === 'bag') {
+      const bagSize = bagBase(row);
+      row.costKg = bagSize > 0 && row.cost !== '' ? fmt2(Number(row.cost) / bagSize) : '';
+      row.sellB = bagSize > 0 && row.sell !== '' ? fmt2(Number(row.sell) * bagSize) : '';
+      replaceRowDom(row);
+      tbody.querySelector(`tr[data-row-id="${row.id}"] [name="size_unit"]`)?.focus();
+    } else if (e.target.name === 'rcvUnit') {
+      row.rcvUnit = e.target.value;
+      replaceRowDom(row);
+      updateExistingNotice(row);
+      clearErrors();
+      updateFooter();
+      return;
     } else {
       updateDerived(row);
     }
@@ -471,6 +737,87 @@ export async function renderStockIn() {
       }
     }
 
+    if (row.type === 'bag') {
+      const bagSize = bagBase(row);
+      if (bagSize > 0) {
+        if (e.target.name === 'cost') {
+          row.costKg = row.cost === '' ? '' : fmt2(Number(row.cost) / bagSize);
+        } else if (e.target.name === 'costKg') {
+          row.cost = row.costKg === '' ? '' : fmt2(Number(row.costKg) * bagSize);
+        } else if (e.target.name === 'sell') {
+          row.sellB = row.sell === '' ? '' : fmt2(Number(row.sell) * bagSize);
+        } else if (e.target.name === 'sellB') {
+          row.sell = row.sellB === '' ? '' : fmt2(Number(row.sellB) / bagSize);
+        } else if (e.target.name === 'bagSize') {
+          if (row.cost !== '') row.costKg = fmt2(Number(row.cost) / bagSize);
+          if (row.sell !== '') row.sellB = fmt2(Number(row.sell) * bagSize);
+        }
+      } else if (e.target.name === 'bagSize') {
+        row.costKg = '';
+        row.sellB = '';
+      }
+    }
+
+    if (row.type === 'carton_box') {
+      const bpc = Number(row.bpc) || 0;
+      const ppb = Number(row.ppb) || 0;
+      const ppc = bpc * ppb;
+      const hasCost = row.cost !== '';
+      const hasSell = row.sell !== '';
+
+      if (e.target.name === 'cost') {
+        row.costBox = hasCost && bpc > 0 ? fmt2(Number(row.cost) / bpc) : '';
+        row.costPc = hasCost && ppc > 0 ? fmt2(Number(row.cost) / ppc) : '';
+      } else if (e.target.name === 'costBox') {
+        row.cost = row.costBox !== '' && bpc > 0 ? fmt2(Number(row.costBox) * bpc) : '';
+        row.costPc = row.cost !== '' && ppc > 0 ? fmt2(Number(row.cost) / ppc) : '';
+      } else if (e.target.name === 'costPc') {
+        row.cost = row.costPc !== '' && ppc > 0 ? fmt2(Number(row.costPc) * ppc) : '';
+        row.costBox = row.cost !== '' && bpc > 0 ? fmt2(Number(row.cost) / bpc) : '';
+      } else if (e.target.name === 'sell') {
+        row.sellBox = hasSell && ppb > 0 ? fmt2(Number(row.sell) * ppb) : '';
+        row.sellC = hasSell && ppc > 0 ? fmt2(Number(row.sell) * ppc) : '';
+      } else if (e.target.name === 'sellBox') {
+        row.sell = row.sellBox !== '' && ppb > 0 ? fmt2(Number(row.sellBox) / ppb) : '';
+        row.sellC = row.sellBox !== '' && bpc > 0 ? fmt2(Number(row.sellBox) * bpc) : '';
+      } else if (e.target.name === 'sellC') {
+        row.sell = row.sellC !== '' && ppc > 0 ? fmt2(Number(row.sellC) / ppc) : '';
+        row.sellBox = row.sellC !== '' && bpc > 0 ? fmt2(Number(row.sellC) / bpc) : '';
+      } else if (e.target.name === 'bpc' || e.target.name === 'ppb') {
+        row.costBox = hasCost && bpc > 0 ? fmt2(Number(row.cost) / bpc) : '';
+        row.costPc = hasCost && ppc > 0 ? fmt2(Number(row.cost) / ppc) : '';
+        row.sellBox = hasSell && ppb > 0 ? fmt2(Number(row.sell) * ppb) : '';
+        row.sellC = hasSell && ppc > 0 ? fmt2(Number(row.sell) * ppc) : '';
+      }
+    }
+
+    if (row.type === 'crate') {
+      const tpc = Number(row.tpc) || 0;
+      const ppt = Number(row.ppt) || 0;
+      const ppc = tpc * ppt;
+      const hasSell = row.sell !== '';
+      if (e.target.name === 'sell') {
+        row.sellTray = hasSell && ppt ? fmt2(Number(row.sell) * ppt) : '';
+        row.sellC    = hasSell && ppc ? fmt2(Number(row.sell) * ppc) : '';
+      } else if (e.target.name === 'sellTray') {
+        const hasTray = row.sellTray !== '';
+        row.sell  = hasTray && ppt ? fmt2(Number(row.sellTray) / ppt) : '';
+        row.sellC = hasTray && tpc ? fmt2(Number(row.sellTray) * tpc) : '';
+      } else if (e.target.name === 'sellC' && (row.sell !== '' || row.sellTray !== '')) {
+        // derive from crate price
+        row.sell      = row.sellC !== '' && ppc ? fmt2(Number(row.sellC) / ppc) : '';
+        row.sellTray  = row.sellC !== '' && tpc ? fmt2(Number(row.sellC) / tpc) : '';
+      } else if (e.target.name === 'tpc' || e.target.name === 'ppt') {
+        const newTpc = Number(row.tpc) || 0;
+        const newPpt = Number(row.ppt) || 0;
+        const newPpc = newTpc * newPpt;
+        if (hasSell) {
+          row.sellTray = newPpt ? fmt2(Number(row.sell) * newPpt) : '';
+          row.sellC    = newPpc ? fmt2(Number(row.sell) * newPpc) : '';
+        }
+      }
+    }
+
     updateDerived(row);
     clearErrors();
     updateFooter();
@@ -479,6 +826,13 @@ export async function renderStockIn() {
 
   // ── tbody: remove button ─────────────────────────────────────────────────
   tbody.addEventListener('click', (e) => {
+    const collapsedRow = e.target.closest('tr.row-collapsed[data-row-id]');
+    if (collapsedRow && !e.target.closest('.btn-row-remove')) {
+      collapsedRow.classList.remove('row-collapsed');
+      collapsedRow.querySelector('[name="name"]')?.focus();
+      return;
+    }
+
     const btn = e.target.closest('.btn-row-remove');
     if (!btn) return;
     const tr = btn.closest('tr[data-row-id]');
@@ -503,21 +857,25 @@ export async function renderStockIn() {
     if (!active || !tbody.contains(active)) return;
     e.preventDefault();
     // Skip readonly auto-fields in Tab order
-    const allFields = [...tbody.querySelectorAll('input:not([readonly]), select')];
+    const allFields = [...tbody.querySelectorAll('input:not([readonly]), select')]
+      .filter((field) => field.offsetParent !== null);
     const idx = allFields.indexOf(active);
     if (idx === -1) return;
     if (idx < allFields.length - 1) {
       allFields[idx + 1].focus();
     } else {
-      appendRow();
-      tbody.querySelector('tr:last-child [name="name"]')?.focus();
+      const activeRowId = active.closest('tr[data-row-id]')?.dataset.rowId;
+      const completedRow = rows.find((row) => row.id === activeRowId);
+      if (appendRow()) {
+        tbody.querySelector('tr:last-child [name="name"]')?.focus();
+        if (completedRow) collapseRow(completedRow);
+      }
     }
   });
 
   // ── Add row button ───────────────────────────────────────────────────────
   document.getElementById('add-row').addEventListener('click', () => {
-    appendRow();
-    tbody.querySelector('tr:last-child [name="name"]')?.focus();
+    if (appendRow()) tbody.querySelector('tr:last-child [name="name"]')?.focus();
   });
 
   // ── Save ─────────────────────────────────────────────────────────────────
@@ -538,7 +896,9 @@ export async function renderStockIn() {
     rows.forEach((row) => {
       const err = validateRow(row);
       if (err) {
-        tbody.querySelector(`tr[data-row-id="${row.id}"]`)?.classList.add('row-error');
+        const tr = tbody.querySelector(`tr[data-row-id="${row.id}"]`);
+        tr?.classList.remove('row-collapsed');
+        tr?.classList.add('row-error');
         if (!firstError) firstError = err;
       }
     });
@@ -558,13 +918,16 @@ export async function renderStockIn() {
 
     // Sell < cost confirm per row
     for (const row of validRows) {
-      const costPc = row.type === 'carton' && Number(row.ppc)
+      const costPc = row.type === 'carton_box' && Number(row.bpc) * Number(row.ppb) > 0
+        ? Number(row.cost) / (Number(row.bpc) * Number(row.ppb))
+        : row.type === 'carton' && Number(row.ppc)
         ? Number(row.cost) / Number(row.ppc)
-        : row.type === 'bag' && Number(row.qty)
-        ? Number(row.cost) / Number(row.qty)
+        : row.type === 'bag' && bagBase(row)
+        ? Number(row.cost) / bagBase(row)
         : Number(row.cost);
       if (Number(row.sell) < costPc) {
-        if (!confirm(`"${row.name}": sell (${fmtKES(Number(row.sell))}) is below cost/pc (${fmtKES(costPc)}). Continue?`)) {
+        const costLabel = row.type === 'bag' ? 'cost/unit' : 'cost/pc';
+        if (!confirm(`"${row.name}": sell (${fmtKES(Number(row.sell))}) is below ${costLabel} (${fmtKES(costPc)}). Continue?`)) {
           tbody.querySelector(`tr[data-row-id="${row.id}"]`)?.classList.add('row-error');
           return;
         }
@@ -574,7 +937,9 @@ export async function renderStockIn() {
     // Duplicate SKU confirm
     const dupKeys = new Map();
     for (const row of validRows) {
-      const key = `${row.name.trim().toLowerCase()}|${row.type}|${row.size_value ?? ''}|${row.size_unit}`;
+      const sizeKey = row.type === 'bag' ? '' : row.size_value;
+      const unitKey = row.type === 'bag' ? bagBaseUnit(row) : row.size_unit;
+      const key = `${row.name.trim().toLowerCase()}|${row.type}|${sizeKey ?? ''}|${unitKey}`;
       if (dupKeys.has(key)) {
         if (!confirm(`Duplicate rows found for "${row.name}" (${row.type}). Merge and save?`)) return;
         break;

@@ -58,8 +58,11 @@ export async function renderProducts() {
         <option value="">All</option>
         <option value="pieces">pieces</option>
         <option value="carton">carton</option>
+        <option value="carton_box">carton_box</option>
         <option value="packet">packet</option>
         <option value="bag">bag</option>
+        <option value="crate">crate</option>
+        <option value="dozen">dozen</option>
       </select>
     </div>
     <div class="products-kpis">
@@ -151,16 +154,37 @@ export async function renderProducts() {
     if (!product) return;
 
     if (button.dataset.action === 'restock') {
-      const isCarton = product.category === 'carton';
-      const isBag    = product.category === 'bag';
-      const ppc      = Number(product.pieces_per_carton || 0);
-      const qtyLabel = isCarton ? 'Qty (cartons)' : isBag ? 'Qty (kg)' : 'Qty (pieces)';
-      const costLabel = isCarton ? 'Cost per carton (KES)' : isBag ? 'Total cost for this batch (KES)' : 'Cost per piece (KES)';
-      const defaultSell = isCarton ? product.sell_price : product.sell_price;
+      const isCarton    = product.category === 'carton';
+      const isBag       = product.category === 'bag';
+      const isCartonBox = product.category === 'carton_box';
+      const isCrate     = product.category === 'crate';
+      const isDozen     = product.category === 'dozen';
+
+      // ppc = total pieces per outer unit (carton/crate/dozen)
+      const tpc = Number(product.packets_per_box || 0);    // trays per crate
+      const ppt = Number(product.pieces_per_box  || 0);    // pieces per tray
+      const ppc = isCrate ? tpc * ppt : Number(product.pieces_per_carton || 0);
+
+      const qtyLabel  = isCarton || isCartonBox ? 'Qty (cartons)'
+        : isCrate  ? 'Qty (crates)'
+        : isDozen  ? 'Qty (dozens)'
+        : isBag    ? 'Qty (kg)'
+        : 'Qty (pieces)';
+      const costLabel = isCarton || isCartonBox ? 'Cost per carton (KES)'
+        : isCrate  ? 'Cost per crate (KES)'
+        : isDozen  ? 'Cost per dozen (KES)'
+        : isBag    ? 'Total cost for this batch (KES)'
+        : 'Cost per piece (KES)';
+      const sellLabel = isBag ? 'kg' : 'piece';
+
+      const metaExtra = isCarton || isDozen ? (ppc ? ` · ${ppc} pcs/carton` : '')
+        : isCartonBox ? (ppc ? ` · ${product.packets_per_box} boxes/ctn · ${product.pieces_per_box} pcs/box` : '')
+        : isCrate     ? (ppc ? ` · ${tpc} trays/crate · ${ppt} pcs/tray` : '')
+        : '';
 
       openModal(`<form id="restock-form" class="restock-form">
         <h2>Restock — ${escapeHtml(product.name)}</h2>
-        <p class="restock-meta">${escapeHtml(product.category)}${ppc ? ` · ${ppc} pcs/carton` : ''} · Current stock: <strong>${numberDisplay(product.stock_qty)} ${isBag ? 'kg' : 'pcs'}</strong></p>
+        <p class="restock-meta">${escapeHtml(product.category)}${metaExtra} · Current stock: <strong>${numberDisplay(product.stock_qty)} pcs</strong></p>
         <label>Supplier name *
           <input name="supplier" type="text" list="restock-supplier-list" autocomplete="off" placeholder="Who did you buy from?" required>
           <datalist id="restock-supplier-list">${(suppliersResult.data ?? []).map((s) => `<option value="${escapeHtml(s.name)}"></option>`).join('')}</datalist>
@@ -168,7 +192,7 @@ export async function renderProducts() {
         <label>Date<input name="date" type="date" value="${today()}" required></label>
         <label>${escapeHtml(qtyLabel)}<input name="qty" type="number" min="0.001" step="any" placeholder="0" required></label>
         <label>${escapeHtml(costLabel)}<input name="cost" type="number" min="0.01" step="0.01" placeholder="0" required></label>
-        <label>Sell price per ${isBag ? 'kg' : 'piece'} (KES)<input name="sell" type="number" min="0.01" step="0.01" value="${escapeHtml(String(defaultSell))}" required></label>
+        <label>Sell price per ${sellLabel} (KES)<input name="sell" type="number" min="0.01" step="0.01" value="${escapeHtml(String(product.sell_price || ''))}" required></label>
         <p id="restock-profit" class="restock-profit"></p>
         <div class="modal-actions">
           <button class="btn btn-green" type="submit">Save Restock</button>
@@ -183,10 +207,11 @@ export async function renderProducts() {
         const cost = Number(form.elements.cost.value) || 0;
         const sell = Number(form.elements.sell.value) || 0;
         if (!qty || !cost || !sell) { form.querySelector('#restock-profit').textContent = ''; return; }
-        const costPerUnit = isCarton && ppc ? cost / ppc : isBag ? cost / qty : cost;
-        const profitPerUnit = sell - costPerUnit;
+        const costPerPc = (isCarton || isCartonBox || isCrate || isDozen) && ppc
+          ? cost / ppc : isBag ? cost / qty : cost;
+        const profitPerUnit = sell - costPerPc;
         const el = form.querySelector('#restock-profit');
-        el.textContent = `Margin: ${fmtKES(profitPerUnit)} per ${isBag ? 'kg' : 'piece'} (${costPerUnit > 0 ? (profitPerUnit / costPerUnit * 100).toFixed(1) : 0}%)`;
+        el.textContent = `Margin: ${fmtKES(profitPerUnit)} per ${sellLabel} (${costPerPc > 0 ? (profitPerUnit / costPerPc * 100).toFixed(1) : 0}%)`;
         el.className = `restock-profit ${profitPerUnit >= 0 ? 'profit-positive' : 'profit-negative'}`;
       }
 
@@ -204,16 +229,39 @@ export async function renderProducts() {
           showToast('Fill in all fields', 'error'); return;
         }
 
+        const base = { name: product.name, size_value: product.size_value, size_unit: product.size_unit };
         let payload;
         if (isCarton) {
-          payload = { name: product.name, category: 'carton', size_value: product.size_value, size_unit: product.size_unit,
-            pieces_per_carton: ppc, cost_price: cost / ppc, sell_price: sell,
-            carton_sell_price: Number(product.carton_sell_price || sell * ppc), stock_qty: qty * ppc };
+          payload = { ...base, category: 'carton', pieces_per_carton: ppc,
+            cost_price: cost / ppc, sell_price: sell,
+            carton_sell_price: Number(product.carton_sell_price || sell * ppc),
+            stock_qty: qty * ppc };
+        } else if (isCartonBox) {
+          payload = { ...base, category: 'carton_box',
+            packets_per_box: tpc || product.packets_per_box,
+            pieces_per_box: ppt || product.pieces_per_box,
+            pieces_per_carton: ppc,
+            cost_price: cost / ppc, sell_price: sell,
+            box_sell_price: Number(product.box_sell_price || sell * (product.pieces_per_box || 0)),
+            carton_sell_price: Number(product.carton_sell_price || sell * ppc),
+            stock_qty: qty * ppc };
+        } else if (isCrate) {
+          payload = { ...base, category: 'crate',
+            packets_per_box: tpc, pieces_per_box: ppt, pieces_per_carton: ppc,
+            cost_price: cost / ppc, sell_price: sell,
+            box_sell_price: Number(product.box_sell_price || sell * ppt),
+            carton_sell_price: Number(product.carton_sell_price || sell * ppc),
+            stock_qty: qty * ppc };
+        } else if (isDozen) {
+          payload = { ...base, category: 'dozen', pieces_per_carton: ppc,
+            cost_price: cost / ppc, sell_price: sell,
+            carton_sell_price: Number(product.carton_sell_price || sell * ppc),
+            stock_qty: qty * ppc };
         } else if (isBag) {
-          payload = { name: product.name, category: 'bag', size_value: product.size_value, size_unit: product.size_unit,
+          payload = { ...base, category: 'bag',
             cost_price: cost / qty, sell_price: sell, stock_qty: qty };
         } else {
-          payload = { name: product.name, category: product.category, size_value: product.size_value, size_unit: product.size_unit,
+          payload = { ...base, category: product.category,
             cost_price: cost, sell_price: sell, stock_qty: qty };
         }
 
@@ -225,11 +273,11 @@ export async function renderProducts() {
           return;
         }
 
-        const addedPcs = isCarton ? qty * ppc : qty;
+        const addedPcs = isBag ? qty : (isCarton || isCartonBox || isCrate || isDozen) ? qty * ppc : qty;
         product.stock_qty = Number(product.stock_qty || 0) + addedPcs;
         product.cost_price = payload.cost_price;
         product.sell_price = sell;
-        showToast(`Restocked ${escapeHtml(product.name)} — new stock: ${numberDisplay(product.stock_qty)} ${isBag ? 'kg' : 'pcs'}`);
+        showToast(`Restocked ${escapeHtml(product.name)} — new stock: ${numberDisplay(product.stock_qty)} pcs`);
         closeModal();
         applyFilters();
       });
