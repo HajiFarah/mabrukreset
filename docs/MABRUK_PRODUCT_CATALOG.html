@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mabruk Shop — Master Product Catalog</title>
 <style>
-  /* ── Reset ────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* ── Page shell ───────────────────────────────────── */
   body {
     font-family: 'Segoe UI', system-ui, Arial, sans-serif;
     font-size: 15px;
@@ -17,159 +15,132 @@
     background: #e8e4dd;
   }
 
-  .layout {
-    display: flex;
-    min-height: 100vh;
-  }
+  .layout { display: flex; min-height: 100vh; }
 
-  /* ── Sidebar ──────────────────────────────────────── */
+  /* ── Sidebar ── */
   .sidebar {
-    width: 260px;
+    width: 256px;
     flex-shrink: 0;
     background: #1a1a1a;
-    color: #ccc;
-    padding: 28px 0;
     position: sticky;
     top: 0;
     height: 100vh;
     overflow-y: auto;
+    padding: 24px 0;
   }
 
   .sidebar-title {
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: #c9912b;
-    padding: 0 22px 14px;
-    border-bottom: 1px solid #333;
-    margin-bottom: 10px;
+    padding: 0 20px 14px;
+    border-bottom: 1px solid #2e2e2e;
+    margin-bottom: 8px;
   }
 
   .sidebar a {
     display: block;
-    padding: 6px 22px;
+    padding: 5px 20px;
     font-size: 13px;
-    color: #b0b0b0;
+    color: #aaa;
     text-decoration: none;
     border-left: 3px solid transparent;
     line-height: 1.4;
-    transition: all 0.12s;
+    transition: color 0.12s, background 0.12s, border-color 0.12s;
   }
 
-  .sidebar a:hover {
+  .sidebar a:hover, .sidebar a.active {
     color: #fff;
     border-left-color: #c9912b;
     background: rgba(201,145,43,0.1);
   }
 
-  .sidebar a.flag-link { color: #d98080; }
-  .sidebar a.flag-link:hover {
+  .sidebar a.flag-link { color: #d08080; }
+  .sidebar a.flag-link:hover, .sidebar a.flag-link.active {
     color: #ffaaaa;
     border-left-color: #c0392b;
     background: rgba(192,57,43,0.1);
   }
 
-  .sidebar-divider {
-    border: none;
-    border-top: 1px solid #2d2d2d;
-    margin: 8px 22px;
-  }
+  .sidebar a.sub-link { color: #888; }
+
+  .sidebar-divider { border: none; border-top: 1px solid #2e2e2e; margin: 8px 20px; }
 
   .sidebar::-webkit-scrollbar { width: 4px; }
   .sidebar::-webkit-scrollbar-track { background: #111; }
   .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
 
-  /* ── Main content ─────────────────────────────────── */
+  /* ── Main ── */
   .main {
     flex: 1;
     min-width: 0;
     background: #fff;
-    /* Constrain content width so it doesn't stretch edge-to-edge */
-    padding: 56px 72px;
+    padding: 56px 80px;
   }
 
-  /* Inner content max-width for comfortable reading */
-  .main > * {
-    max-width: 860px;
+  /* Constrain readable line length */
+  .main > h1, .main > h2, .main > h3,
+  .main > p, .main > ul, .main > ol,
+  .main > blockquote, .main > hr {
+    max-width: 820px;
   }
 
-  /* Tables get a bit more room */
-  .main > table,
-  .main > blockquote {
-    max-width: 100%;
-  }
+  .main > table { max-width: 960px; }
 
-  /* ── Typography ───────────────────────────────────── */
+  /* ── Headings ── */
   h1 {
     font-size: 30px;
     font-weight: 800;
-    color: #1a1a1a;
     letter-spacing: -0.02em;
     border-bottom: 4px solid #c9912b;
     padding-bottom: 16px;
-    margin-bottom: 8px;
-    max-width: 100%;
-  }
-
-  /* Meta info lines after h1 */
-  h1 ~ p:not(h2 ~ p):not(h3 ~ p) {
-    font-size: 13.5px;
-    color: #666;
-    margin-bottom: 4px;
-    line-height: 1.5;
+    margin-bottom: 6px;
+    scroll-margin-top: 24px;
   }
 
   h2 {
     font-size: 18px;
     font-weight: 700;
-    color: #8a6010;
+    color: #7a5510;
     margin-top: 52px;
     margin-bottom: 16px;
-    padding: 12px 18px;
+    padding: 11px 18px;
     background: #fdf8ee;
     border-left: 5px solid #c9912b;
     border-radius: 0 5px 5px 0;
-    max-width: 100%;
+    scroll-margin-top: 24px;
   }
 
-  h3 {
-    font-size: 14px;
-    font-weight: 700;
-    color: #555;
-    margin-top: 28px;
-    margin-bottom: 12px;
-    padding-bottom: 5px;
-    border-bottom: 1px dashed #d8d3c8;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    max-width: 100%;
-  }
-
-  h3[id*="flag"] {
-    color: #a93226;
-    border-bottom-color: #f1b0a8;
-  }
-
-  h2#flags--issues-to-resolve-before-seeding {
+  h2[id*="flag"] {
     color: #922b21;
     background: #fdf0ef;
     border-left-color: #c0392b;
   }
 
-  p {
-    font-size: 15px;
+  h3 {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #555;
+    margin-top: 28px;
     margin-bottom: 12px;
-    color: #333;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #d5d0c8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    scroll-margin-top: 24px;
   }
 
+  h3[id*="flag"] { color: #a93226; border-bottom-color: #f0b0a8; }
+
+  p { font-size: 15px; margin-bottom: 12px; color: #333; }
   strong { color: #111; }
   a { color: #c9912b; }
 
-  /* ── Tables ───────────────────────────────────────── */
+  /* ── Tables ── */
   table {
     width: 100%;
-    max-width: 100%;
     border-collapse: collapse;
     margin: 6px 0 28px;
     font-size: 13.5px;
@@ -178,10 +149,7 @@
     overflow: hidden;
   }
 
-  thead tr {
-    background: #252525;
-    color: #f0f0f0;
-  }
+  thead tr { background: #252525; color: #f0f0f0; }
 
   thead th {
     padding: 10px 14px;
@@ -197,25 +165,20 @@
   thead th:last-child { border-right: none; }
 
   tbody tr:nth-child(even) { background: #faf9f5; }
-  tbody tr:hover { background: #fef5e0; transition: background 0.1s; }
+  tbody tr:hover { background: #fef5e0; }
 
   tbody td {
     padding: 8px 14px;
-    border-bottom: 1px solid #ecea e2;
+    border-bottom: 1px solid #eceae2;
     border-right: 1px solid #f0ede5;
     vertical-align: top;
-    color: #2a2a2a;
     font-size: 13.5px;
     line-height: 1.55;
+    color: #2a2a2a;
   }
 
-  tbody td:last-child {
-    border-right: none;
-    color: #666;
-    font-size: 13px;
-  }
+  tbody td:last-child { border-right: none; color: #666; font-size: 13px; }
 
-  /* Cost/price column (4th col) */
   tbody td:nth-child(4) {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
@@ -223,69 +186,40 @@
     white-space: nowrap;
   }
 
-  /* ── Blockquotes ──────────────────────────────────── */
+  /* ── Blockquotes ── */
   blockquote {
-    border-left: 5px solid #c9912b;
-    margin: 16px 0;
-    padding: 12px 18px;
-    background: #fffaf2;
-    border-radius: 0 5px 5px 0;
-    max-width: 100%;
-  }
-
-  blockquote p {
-    margin: 0;
-    font-size: 14px;
-    color: #7a4d00;
-    line-height: 1.6;
-  }
-
-  /* Warning blockquotes */
-  blockquote:has(p) {
-    border-left-color: #c0392b;
+    border-left: 5px solid #c0392b;
+    margin: 14px 0;
+    padding: 11px 18px;
     background: #fdf3f2;
+    border-radius: 0 5px 5px 0;
   }
 
-  blockquote p { color: #922b21; font-weight: 500; }
+  blockquote p { margin: 0; font-size: 14px; color: #922b21; font-weight: 500; line-height: 1.6; }
 
-  /* ── Lists ────────────────────────────────────────── */
-  ul, ol {
-    margin: 10px 0 16px 26px;
-  }
+  /* ── Lists ── */
+  ul, ol { margin: 10px 0 16px 26px; }
+  li { margin-bottom: 6px; color: #333; font-size: 14px; line-height: 1.6; }
 
-  li {
-    margin-bottom: 6px;
-    color: #333;
-    font-size: 14px;
-    line-height: 1.6;
-  }
-
-  /* ── Code ─────────────────────────────────────────── */
+  /* ── Code ── */
   code {
     background: #f0ede5;
     padding: 2px 7px;
     border-radius: 4px;
-    font-family: 'Consolas', 'Cascadia Code', monospace;
+    font-family: 'Consolas', monospace;
     font-size: 13px;
     color: #5a3e00;
   }
 
-  /* ── Dividers ─────────────────────────────────────── */
-  hr {
-    border: none;
-    border-top: 1px solid #e5e1d8;
-    margin: 40px 0;
-    max-width: 100%;
-  }
+  hr { border: none; border-top: 1px solid #e5e1d8; margin: 40px 0; }
 
-  /* ── Print ────────────────────────────────────────── */
+  /* ── Print ── */
   @media print {
     .sidebar { display: none; }
     .main { padding: 24px 36px; }
-    .main > * { max-width: 100%; }
+    .main > * { max-width: 100% !important; }
     body { background: #fff; font-size: 12px; }
-    h1 { font-size: 22px; }
-    h2 { font-size: 15px; margin-top: 20px; padding: 8px 12px; page-break-after: avoid; }
+    h2 { font-size: 14px; margin-top: 20px; padding: 7px 12px; page-break-after: avoid; }
     h3 { font-size: 12px; page-break-after: avoid; }
     table { font-size: 11px; page-break-inside: auto; }
     thead { display: table-header-group; }
@@ -300,57 +234,61 @@
 
   <nav class="sidebar">
     <div class="sidebar-title">Mabruk Catalog</div>
-    <a href="#mabruk-shop--master-product-catalog">Overview</a>
     <a href="#summary">Summary</a>
-    <a href="#supplier-directory">Suppliers</a>
-    <hr class="sidebar-divider">
-    <a href="#section-1-spices--seasonings">1. Spices</a>
-    <a href="#section-2-flours-grains--pasta">2. Flours &amp; Pasta</a>
-    <a href="#section-3-rice">3. Rice</a>
-    <a href="#section-4-sugar--baking">4. Sugar &amp; Baking</a>
-    <a href="#section-5-cooking-oils--fats">5. Oils &amp; Fats</a>
-    <a href="#section-6-dairy--milk">6. Dairy &amp; Milk</a>
-    <a href="#section-7-beverages--juices">7. Juices</a>
-    <a href="#section-8-beverages--sodas">8. Sodas</a>
-    <a href="#section-9-water">9. Water</a>
-    <a href="#section-10-tea--coffee">10. Tea &amp; Coffee</a>
-    <a href="#section-11-breakfast-cereals">11. Cereals</a>
-    <a href="#section-12-condiments--sauces">12. Condiments</a>
-    <a href="#section-13-canned--preserved-foods">13. Canned Foods</a>
-    <a href="#section-14-snacks-biscuits--confectionery">14. Snacks</a>
-    <a href="#section-15-pulses--legumes">15. Pulses</a>
-    <a href="#section-16-salt">16. Salt</a>
-    <a href="#section-17-personal-care--soaps">17. Soaps</a>
-    <a href="#section-18-personal-care--shampoos-hair--body">18. Shampoos &amp; Hair</a>
-    <a href="#section-19-oral-care">19. Oral Care</a>
-    <a href="#section-20-cleaning-products">20. Cleaning</a>
-    <a href="#section-21-sanitary--paper-products">21. Sanitary &amp; Paper</a>
-    <a href="#section-22-air-fresheners--household">22. Air Fresheners</a>
-    <a href="#section-23-batteries">23. Batteries</a>
-    <a href="#section-24-personal-grooming">24. Grooming</a>
-    <a href="#section-25-electronics-non-grocery">25. Electronics</a>
-    <a href="#section-26-miscellaneous--needs-verification">26. Misc / Verify</a>
-    <hr class="sidebar-divider">
-    <a href="#flags--issues-to-resolve-before-seeding" class="flag-link">⚠ All Flags</a>
-    <a href="#flag-1-voided-items--do-not-seed-as-stock-received" class="flag-link">Flag 1: Voided</a>
-    <a href="#flag-2-unpaid-invoice--supersanta-hub-supply" class="flag-link">Flag 2: Unpaid</a>
-    <a href="#flag-3-duplicate-receipt-images--count-only-once-per-event" class="flag-link">Flag 3: Duplicates</a>
-    <a href="#flag-4-price-discrepancies--verify-against-paper-originals" class="flag-link">Flag 4: Prices</a>
-    <a href="#flag-5-customer-name-discrepancies-on-receipts" class="flag-link">Flag 5: Names</a>
-    <a href="#flag-6-blurry--unreadable-items" class="flag-link">Flag 6: Blurry</a>
-    <a href="#flag-7-items-requiring-product-category-confirmation" class="flag-link">Flag 7: Categories</a>
+<a href="#product-count-by-section" class="sub-link" style="padding-left:32px;font-size:12px;">Product Count by Section</a>
+<a href="#spend-by-receipt-pdf-source-verified-totals" class="sub-link" style="padding-left:32px;font-size:12px;">Spend by Receipt (PDF source — verified totals)</a>
+<a href="#image-only-receipts-totals-not-verified-line-by-line" class="sub-link" style="padding-left:32px;font-size:12px;">Image-Only Receipts (totals not verified line-by-line)</a>
+<a href="#table-of-contents">Table of Contents</a>
+<a href="#supplier-directory">Supplier Directory</a>
+<a href="#section-1-spices-seasonings">Section 1: Spices & Seasonings</a>
+<a href="#1a-bulk-loose-sold-per-kg" class="sub-link" style="padding-left:32px;font-size:12px;">1A — Bulk / Loose (sold per kg)</a>
+<a href="#1b-packaged-spices-masala-piecescarton" class="sub-link" style="padding-left:32px;font-size:12px;">1B — Packaged Spices & Masala (pieces/carton)</a>
+<a href="#section-2-flours-grains-pasta">Section 2: Flours, Grains & Pasta</a>
+<a href="#section-3-rice">Section 3: Rice</a>
+<a href="#section-4-sugar-baking">Section 4: Sugar & Baking</a>
+<a href="#section-5-cooking-oils-fats">Section 5: Cooking Oils & Fats</a>
+<a href="#section-6-dairy-milk">Section 6: Dairy & Milk</a>
+<a href="#section-7-beverages-juices">Section 7: Beverages — Juices</a>
+<a href="#section-8-beverages-sodas">Section 8: Beverages — Sodas</a>
+<a href="#section-9-water">Section 9: Water</a>
+<a href="#section-10-tea-coffee">Section 10: Tea & Coffee</a>
+<a href="#section-11-breakfast-cereals">Section 11: Breakfast Cereals</a>
+<a href="#section-12-condiments-sauces">Section 12: Condiments & Sauces</a>
+<a href="#section-13-canned-preserved-foods">Section 13: Canned & Preserved Foods</a>
+<a href="#section-14-snacks-biscuits-confectionery">Section 14: Snacks, Biscuits & Confectionery</a>
+<a href="#section-15-pulses-legumes">Section 15: Pulses & Legumes</a>
+<a href="#section-16-salt">Section 16: Salt</a>
+<a href="#section-17-personal-care-soaps">Section 17: Personal Care — Soaps</a>
+<a href="#section-18-personal-care-shampoos-hair-body">Section 18: Personal Care — Shampoos, Hair & Body</a>
+<a href="#section-19-oral-care">Section 19: Oral Care</a>
+<a href="#section-20-cleaning-products">Section 20: Cleaning Products</a>
+<a href="#section-21-sanitary-paper-products">Section 21: Sanitary & Paper Products</a>
+<a href="#section-22-air-fresheners-household">Section 22: Air Fresheners & Household</a>
+<a href="#section-23-batteries">Section 23: Batteries</a>
+<a href="#section-24-personal-grooming">Section 24: Personal Grooming</a>
+<a href="#section-25-electronics-non-grocery">Section 25: Electronics (Non-Grocery)</a>
+<a href="#section-26-miscellaneous-needs-verification">Section 26: Miscellaneous / Needs Verification</a>
+<hr class="sidebar-divider">
+<a href="#flags-issues-to-resolve-before-seeding" class="flag-link">&#9888; Flags & Issues to Resolve Before Seeding</a>
+<a href="#flag-1-voided-items-do-not-seed-as-stock-received" class="flag-link" style="padding-left:32px;font-size:12px;">&#9888; FLAG 1: VOIDED ITEMS — Do NOT seed as stock received</a>
+<a href="#flag-2-unpaid-invoice-supersanta-hub-supply" class="flag-link" style="padding-left:32px;font-size:12px;">&#9888; FLAG 2: UNPAID INVOICE — Supersanta Hub Supply</a>
+<a href="#flag-3-duplicate-receipt-images-count-only-once-per-event" class="flag-link" style="padding-left:32px;font-size:12px;">&#9888; FLAG 3: DUPLICATE RECEIPT IMAGES — Count only once per event</a>
+<a href="#flag-4-price-discrepancies-verify-against-paper-originals" class="flag-link" style="padding-left:32px;font-size:12px;">&#9888; FLAG 4: PRICE DISCREPANCIES — Verify against paper originals</a>
+<a href="#flag-5-customer-name-discrepancies-on-receipts" class="flag-link" style="padding-left:32px;font-size:12px;">&#9888; FLAG 5: CUSTOMER NAME DISCREPANCIES ON RECEIPTS</a>
+<a href="#flag-6-blurry-unreadable-items" class="flag-link" style="padding-left:32px;font-size:12px;">&#9888; FLAG 6: BLURRY / UNREADABLE ITEMS</a>
+<a href="#flag-7-items-requiring-product-category-confirmation" class="flag-link" style="padding-left:32px;font-size:12px;">&#9888; FLAG 7: ITEMS REQUIRING PRODUCT CATEGORY CONFIRMATION</a>
   </nav>
 
   <main class="main">
-    <h1>Mabruk Shop — Master Product Catalog</h1>
+    <h1 id="mabruk-shop-master-product-catalog">Mabruk Shop — Master Product Catalog</h1>
 <p><strong>Generated:</strong> 03-Oct-2026
 <strong>Sources:</strong> 1 structured PDF (<code>stock_seed_document.pdf</code>, 219 lines, 10 receipts) + 62 receipt images (WA0002–WA0063)
 <strong>Unique purchase events:</strong> ~35 distinct receipts (after deduplication)
 <strong>Total suppliers:</strong> 20
 <strong>Status:</strong> DOCUMENTATION ONLY — not yet seeded into system</p>
 <hr>
-<h2>Summary</h2>
-<h3>Product Count by Section</h3>
+<h2 id="summary">Summary</h2>
+<h3 id="product-count-by-section">Product Count by Section</h3>
 <table>
 <thead>
 <tr>
@@ -499,7 +437,7 @@
 <p>Note: A small number of items appear in two sections (e.g. Gilda Beans in both Canned Foods and Pulses; White Wash in both Soaps and Cleaning). These are cross-listed for reference — count each as one SKU.</p>
 </blockquote>
 <hr>
-<h3>Spend by Receipt (PDF source — verified totals)</h3>
+<h3 id="spend-by-receipt-pdf-source-verified-totals">Spend by Receipt (PDF source — verified totals)</h3>
 <table>
 <thead>
 <tr>
@@ -600,7 +538,7 @@
 <td></td>
 </tr>
 </tbody></table>
-<h3>Image-Only Receipts (totals not verified line-by-line)</h3>
+<h3 id="image-only-receipts-totals-not-verified-line-by-line">Image-Only Receipts (totals not verified line-by-line)</h3>
 <p>Receipts extracted from images only (not in PDF). Line items are catalogued above but receipt grand totals were not individually tallied.</p>
 <table>
 <thead>
@@ -702,7 +640,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Table of Contents</h2>
+<h2 id="table-of-contents">Table of Contents</h2>
 <ol>
 <li><a href="#supplier-directory">Supplier Directory</a></li>
 <li><a href="#section-1-spices--seasonings">Section 1: Spices &amp; Seasonings</a></li>
@@ -734,7 +672,7 @@
 <li><a href="#flags--issues-to-resolve-before-seeding">Flags &amp; Issues to Resolve Before Seeding</a></li>
 </ol>
 <hr>
-<h2>Supplier Directory</h2>
+<h2 id="supplier-directory">Supplier Directory</h2>
 <table>
 <thead>
 <tr>
@@ -845,8 +783,8 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 1: Spices &amp; Seasonings</h2>
-<h3>1A — Bulk / Loose (sold per kg)</h3>
+<h2 id="section-1-spices-seasonings">Section 1: Spices & Seasonings</h2>
+<h3 id="1a-bulk-loose-sold-per-kg">1A — Bulk / Loose (sold per kg)</h3>
 <table>
 <thead>
 <tr>
@@ -979,7 +917,7 @@
 <td>10 units bought</td>
 </tr>
 </tbody></table>
-<h3>1B — Packaged Spices &amp; Masala (pieces/carton)</h3>
+<h3 id="1b-packaged-spices-masala-piecescarton">1B — Packaged Spices & Masala (pieces/carton)</h3>
 <table>
 <thead>
 <tr>
@@ -1073,7 +1011,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 2: Flours, Grains &amp; Pasta</h2>
+<h2 id="section-2-flours-grains-pasta">Section 2: Flours, Grains & Pasta</h2>
 <table>
 <thead>
 <tr>
@@ -1247,7 +1185,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 3: Rice</h2>
+<h2 id="section-3-rice">Section 3: Rice</h2>
 <table>
 <thead>
 <tr>
@@ -1317,7 +1255,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 4: Sugar &amp; Baking</h2>
+<h2 id="section-4-sugar-baking">Section 4: Sugar & Baking</h2>
 <table>
 <thead>
 <tr>
@@ -1395,7 +1333,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 5: Cooking Oils &amp; Fats</h2>
+<h2 id="section-5-cooking-oils-fats">Section 5: Cooking Oils & Fats</h2>
 <table>
 <thead>
 <tr>
@@ -1545,7 +1483,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 6: Dairy &amp; Milk</h2>
+<h2 id="section-6-dairy-milk">Section 6: Dairy & Milk</h2>
 <table>
 <thead>
 <tr>
@@ -1655,7 +1593,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 7: Beverages — Juices</h2>
+<h2 id="section-7-beverages-juices">Section 7: Beverages — Juices</h2>
 <table>
 <thead>
 <tr>
@@ -1901,7 +1839,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 8: Beverages — Sodas</h2>
+<h2 id="section-8-beverages-sodas">Section 8: Beverages — Sodas</h2>
 <table>
 <thead>
 <tr>
@@ -1963,7 +1901,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 9: Water</h2>
+<h2 id="section-9-water">Section 9: Water</h2>
 <table>
 <thead>
 <tr>
@@ -2033,7 +1971,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 10: Tea &amp; Coffee</h2>
+<h2 id="section-10-tea-coffee">Section 10: Tea & Coffee</h2>
 <table>
 <thead>
 <tr>
@@ -2111,7 +2049,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 11: Breakfast Cereals</h2>
+<h2 id="section-11-breakfast-cereals">Section 11: Breakfast Cereals</h2>
 <table>
 <thead>
 <tr>
@@ -2149,7 +2087,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 12: Condiments &amp; Sauces</h2>
+<h2 id="section-12-condiments-sauces">Section 12: Condiments & Sauces</h2>
 <table>
 <thead>
 <tr>
@@ -2323,7 +2261,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 13: Canned &amp; Preserved Foods</h2>
+<h2 id="section-13-canned-preserved-foods">Section 13: Canned & Preserved Foods</h2>
 <table>
 <thead>
 <tr>
@@ -2393,7 +2331,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 14: Snacks, Biscuits &amp; Confectionery</h2>
+<h2 id="section-14-snacks-biscuits-confectionery">Section 14: Snacks, Biscuits & Confectionery</h2>
 <table>
 <thead>
 <tr>
@@ -2615,7 +2553,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 15: Pulses &amp; Legumes</h2>
+<h2 id="section-15-pulses-legumes">Section 15: Pulses & Legumes</h2>
 <table>
 <thead>
 <tr>
@@ -2653,7 +2591,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 16: Salt</h2>
+<h2 id="section-16-salt">Section 16: Salt</h2>
 <table>
 <thead>
 <tr>
@@ -2723,7 +2661,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 17: Personal Care — Soaps</h2>
+<h2 id="section-17-personal-care-soaps">Section 17: Personal Care — Soaps</h2>
 <table>
 <thead>
 <tr>
@@ -2825,7 +2763,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 18: Personal Care — Shampoos, Hair &amp; Body</h2>
+<h2 id="section-18-personal-care-shampoos-hair-body">Section 18: Personal Care — Shampoos, Hair & Body</h2>
 <table>
 <thead>
 <tr>
@@ -3039,7 +2977,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 19: Oral Care</h2>
+<h2 id="section-19-oral-care">Section 19: Oral Care</h2>
 <table>
 <thead>
 <tr>
@@ -3101,7 +3039,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 20: Cleaning Products</h2>
+<h2 id="section-20-cleaning-products">Section 20: Cleaning Products</h2>
 <table>
 <thead>
 <tr>
@@ -3251,7 +3189,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 21: Sanitary &amp; Paper Products</h2>
+<h2 id="section-21-sanitary-paper-products">Section 21: Sanitary & Paper Products</h2>
 <table>
 <thead>
 <tr>
@@ -3377,7 +3315,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 22: Air Fresheners &amp; Household</h2>
+<h2 id="section-22-air-fresheners-household">Section 22: Air Fresheners & Household</h2>
 <table>
 <thead>
 <tr>
@@ -3439,7 +3377,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 23: Batteries</h2>
+<h2 id="section-23-batteries">Section 23: Batteries</h2>
 <table>
 <thead>
 <tr>
@@ -3469,7 +3407,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 24: Personal Grooming</h2>
+<h2 id="section-24-personal-grooming">Section 24: Personal Grooming</h2>
 <table>
 <thead>
 <tr>
@@ -3499,7 +3437,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 25: Electronics (Non-Grocery)</h2>
+<h2 id="section-25-electronics-non-grocery">Section 25: Electronics (Non-Grocery)</h2>
 <blockquote>
 <p>⚠️ NOTE: These are phone accessories sourced from MK Electronics (Yare Towers, Eastleigh). This is not typical grocery/FMCG stock. Verify whether Mabruk Shop carries electronics as a regular product line before seeding.</p>
 </blockquote>
@@ -3564,7 +3502,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Section 26: Miscellaneous / Needs Verification</h2>
+<h2 id="section-26-miscellaneous-needs-verification">Section 26: Miscellaneous / Needs Verification</h2>
 <table>
 <thead>
 <tr>
@@ -3610,9 +3548,9 @@
 </tr>
 </tbody></table>
 <hr>
-<h2>Flags &amp; Issues to Resolve Before Seeding</h2>
+<h2 id="flags-issues-to-resolve-before-seeding">Flags & Issues to Resolve Before Seeding</h2>
 <hr>
-<h3>FLAG 1: VOIDED ITEMS — Do NOT seed as stock received</h3>
+<h3 id="flag-1-voided-items-do-not-seed-as-stock-received">FLAG 1: VOIDED ITEMS — Do NOT seed as stock received</h3>
 <p>These items appeared on physical receipts but were reversed via credit note or were explicitly voided. They should not be counted as received inventory.</p>
 <table>
 <thead>
@@ -3639,7 +3577,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h3>FLAG 2: UNPAID INVOICE — Supersanta Hub Supply</h3>
+<h3 id="flag-2-unpaid-invoice-supersanta-hub-supply">FLAG 2: UNPAID INVOICE — Supersanta Hub Supply</h3>
 <blockquote>
 <p>⚠️ Invoice date: 22-Aug-2026 | Total: KES 8,140 | Status: OUTSTANDING — NOT PAID</p>
 </blockquote>
@@ -3686,7 +3624,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h3>FLAG 3: DUPLICATE RECEIPT IMAGES — Count only once per event</h3>
+<h3 id="flag-3-duplicate-receipt-images-count-only-once-per-event">FLAG 3: DUPLICATE RECEIPT IMAGES — Count only once per event</h3>
 <p>The same purchase was photographed multiple times across the image set. Each group below represents a single purchase event.</p>
 <table>
 <thead>
@@ -3753,7 +3691,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h3>FLAG 4: PRICE DISCREPANCIES — Verify against paper originals</h3>
+<h3 id="flag-4-price-discrepancies-verify-against-paper-originals">FLAG 4: PRICE DISCREPANCIES — Verify against paper originals</h3>
 <table>
 <thead>
 <tr>
@@ -3789,7 +3727,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h3>FLAG 5: CUSTOMER NAME DISCREPANCIES ON RECEIPTS</h3>
+<h3 id="flag-5-customer-name-discrepancies-on-receipts">FLAG 5: CUSTOMER NAME DISCREPANCIES ON RECEIPTS</h3>
 <blockquote>
 <p>⚠️ These receipts may not belong to Mabruk Shop. Verify before seeding as Mabruk inventory.</p>
 </blockquote>
@@ -3816,7 +3754,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h3>FLAG 6: BLURRY / UNREADABLE ITEMS</h3>
+<h3 id="flag-6-blurry-unreadable-items">FLAG 6: BLURRY / UNREADABLE ITEMS</h3>
 <table>
 <thead>
 <tr>
@@ -3834,7 +3772,7 @@
 </tr>
 </tbody></table>
 <hr>
-<h3>FLAG 7: ITEMS REQUIRING PRODUCT CATEGORY CONFIRMATION</h3>
+<h3 id="flag-7-items-requiring-product-category-confirmation">FLAG 7: ITEMS REQUIRING PRODUCT CATEGORY CONFIRMATION</h3>
 <table>
 <thead>
 <tr>
@@ -3869,6 +3807,41 @@
   </main>
 
 </div>
+
+<script>
+  // Highlight active sidebar link as you scroll
+  const links      = Array.from(document.querySelectorAll('.sidebar a[href^="#"]'));
+  const headingEls = Array.from(document.querySelectorAll('h1[id],h2[id],h3[id]'));
+
+  function getActive() {
+    const scrollY = window.scrollY + 90;
+    let current = headingEls[0];
+    for (const el of headingEls) {
+      if (el.getBoundingClientRect().top + window.scrollY <= scrollY) current = el;
+    }
+    return current;
+  }
+
+  function onScroll() {
+    const active = getActive();
+    if (!active) return;
+    links.forEach(a => a.classList.remove('active'));
+    const match = links.find(a => a.getAttribute('href') === '#' + active.id);
+    if (match) {
+      match.classList.add('active');
+      // Scroll sidebar to keep active link visible
+      const sidebar = document.querySelector('.sidebar');
+      const linkTop = match.offsetTop;
+      const sidebarH = sidebar.clientHeight;
+      if (linkTop < sidebar.scrollTop || linkTop > sidebar.scrollTop + sidebarH - 60) {
+        sidebar.scrollTop = linkTop - sidebarH / 2;
+      }
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
 
 </body>
 </html>
