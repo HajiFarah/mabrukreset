@@ -89,39 +89,6 @@ Receipts extracted from images only (not in PDF). Line items are catalogued abov
 
 ---
 
-## Table of Contents
-
-1. [Supplier Directory](#supplier-directory)
-2. [Section 1: Spices & Seasonings](#section-1-spices--seasonings)
-3. [Section 2: Flours, Grains & Pasta](#section-2-flours-grains--pasta)
-4. [Section 3: Rice](#section-3-rice)
-5. [Section 4: Sugar & Baking](#section-4-sugar--baking)
-6. [Section 5: Cooking Oils & Fats](#section-5-cooking-oils--fats)
-7. [Section 6: Dairy & Milk](#section-6-dairy--milk)
-8. [Section 7: Beverages — Juices](#section-7-beverages--juices)
-9. [Section 8: Beverages — Sodas](#section-8-beverages--sodas)
-10. [Section 9: Water](#section-9-water)
-11. [Section 10: Tea & Coffee](#section-10-tea--coffee)
-12. [Section 11: Breakfast Cereals](#section-11-breakfast-cereals)
-13. [Section 12: Condiments & Sauces](#section-12-condiments--sauces)
-14. [Section 13: Canned & Preserved Foods](#section-13-canned--preserved-foods)
-15. [Section 14: Snacks, Biscuits & Confectionery](#section-14-snacks-biscuits--confectionery)
-16. [Section 15: Pulses & Legumes](#section-15-pulses--legumes)
-17. [Section 16: Salt](#section-16-salt)
-18. [Section 17: Personal Care — Soaps](#section-17-personal-care--soaps)
-19. [Section 18: Personal Care — Shampoos & Hair](#section-18-personal-care--shampoos--hair)
-20. [Section 19: Oral Care](#section-19-oral-care)
-21. [Section 20: Cleaning Products](#section-20-cleaning-products)
-22. [Section 21: Sanitary & Paper Products](#section-21-sanitary--paper-products)
-23. [Section 22: Air Fresheners & Household](#section-22-air-fresheners--household)
-24. [Section 23: Batteries](#section-23-batteries)
-25. [Section 24: Personal Grooming](#section-24-personal-grooming)
-26. [Section 25: Electronics (Non-Grocery)](#section-25-electronics-non-grocery)
-27. [Section 26: Miscellaneous / Needs Verification](#section-26-miscellaneous--needs-verification)
-28. [Flags & Issues to Resolve Before Seeding](#flags--issues-to-resolve-before-seeding)
-
----
-
 ## Supplier Directory
 
 | # | Supplier Name | Location |
