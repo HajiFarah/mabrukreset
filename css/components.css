@@ -411,6 +411,7 @@ body.login-mode #app { display: grid; min-height: 100vh; place-items: center; pa
 .cart-collapsed-summary > * { margin-right: 12px; }
 .cart-collapsed-total { float: right; }
 .cart-stock-error { display: block; font-size: 11px; color: var(--bad); margin-top: 2px; }
+.price-unit-hint { display: block; font-size: 10px; color: var(--mute); text-align: right; line-height: 1; margin-top: 1px; }
 .cart-empty { padding: var(--s4); text-align: center; color: var(--mute); font-size: 13px; }
 .cart-add-row { padding: 6px 8px; border-top: 1px dashed var(--line); }
 .cart-add-btn { min-width: 0; width: auto; height: 28px; font-size: 12px; padding: 0 12px; color: var(--acc); border-color: var(--acc); }

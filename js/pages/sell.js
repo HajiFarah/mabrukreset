@@ -24,7 +24,7 @@ function defaultPrice(product, unit) {
   const sp  = Number(product.sell_price || 0);
   const csp = Number(product.carton_sell_price || 0);
   const bsp = Number(product.box_sell_price || 0);
-  if (unit === 'carton' || unit === 'crate' || unit === 'dozen')
+  if (unit === 'carton' || unit === 'dozen')
     return csp || sp * Number(product.pieces_per_carton || 0);
   if (unit === 'bag')  return sp * Number(product.bag_weight || 0);
   if (unit === 'box')  return sp * piecesPerBox(product);
@@ -39,10 +39,33 @@ function piecesPerBox(product) {
   return ppc && bpc ? ppc / bpc : 0;
 }
 
+// Minimum valid qty for a cart item given its current unit
+function minQtyFor(item) {
+  if (item.unit === 'kg')    return 0.001; // any loose weight
+  if (item.unit === 'piece') return 1;     // whole pieces only
+  return 0.5;                              // carton / bag / box / tray / crate / dozen — allow halves
+}
+
+// Maximum valid qty given available raw stock units and the selling unit
+// avail = raw stock (pcs or kg), product = product record
+function maxQtyFor(unit, avail, product) {
+  const ppc  = Number(product.pieces_per_carton || 0);
+  const ppb  = piecesPerBox(product);
+  const ppbt = Number(product.pieces_per_box || 0);
+  const bw   = Number(product.bag_weight || 0);
+  if (unit === 'piece') return Math.floor(avail);
+  if (unit === 'kg')    return avail;                                              // any fraction up to stock
+  if ((unit === 'carton' || unit === 'dozen') && ppc) return Math.floor(avail / ppc  * 2) / 2; // nearest 0.5
+  if (unit === 'bag'  && bw)   return Math.floor(avail / bw   * 2) / 2;
+  if (unit === 'box'  && ppb)  return Math.floor(avail / ppb  * 2) / 2;
+  if (unit === 'tray' && ppbt) return Math.floor(avail / ppbt * 2) / 2;
+  return avail;
+}
+
 // Units of stock_qty consumed by this cart item
 function stockUsed(item) {
   const { product, unit, qty } = item;
-  if (unit === 'carton' || unit === 'crate' || unit === 'dozen')
+  if (unit === 'carton' || unit === 'dozen')
     return qty * Number(product.pieces_per_carton || 0);
   if (unit === 'bag')  return qty * Number(product.bag_weight || 0);
   if (unit === 'box')  return qty * piecesPerBox(product);
@@ -229,31 +252,36 @@ export async function renderSell() {
     const ppb = piecesPerBox(product);
     const ppbt = Number(product.pieces_per_box || 0); // pieces per tray (crate)
     const bw  = Number(product.bag_weight || 0);
-    const availableDisplay = (item.unit === 'carton' || item.unit === 'crate' || item.unit === 'dozen') && ppc
-      ? (availableRaw / ppc).toFixed(1)
-      : item.unit === 'box' && ppb
-      ? (availableRaw / ppb).toFixed(1)
-      : item.unit === 'bag' && bw
-      ? (availableRaw / bw).toFixed(2)
-      : item.unit === 'tray' && ppbt
-      ? (availableRaw / ppbt).toFixed(1)
-      : String(availableRaw);
 
-    const minQty  = item.unit === 'kg' ? '0.5' : '1';
-    const stepQty = item.unit === 'kg' ? '0.5' : '1';
-    const invalidQty = !Number.isFinite(item.qty) || item.qty < Number(minQty);
+    const minQtyV  = minQtyFor(item);
+    const minQty   = String(minQtyV);
+    const stepQty  = item.unit === 'kg' ? 'any' : item.unit === 'piece' ? '1' : '0.5';
+    const maxQtyV  = maxQtyFor(item.unit, availableRaw, product);
+    const maxQty   = String(maxQtyV);
+    const invalidQty = !Number.isFinite(item.qty) || item.qty < minQtyV;
     const hasErr = oversell || invalidQty;
 
     const sub = productSize(product) || (product.category === 'carton' ? 'Carton' : product.category === 'bag' ? 'Bag' : product.category === 'carton_box' ? 'Carton+Box' : product.category === 'crate' ? 'Crate' : product.category === 'dozen' ? 'Dozen' : 'Pieces');
 
-    // Unit label for collapsed summary
+    // Descriptive labels — show the piece/kg count so cashier knows exactly what they're selecting
+    const _ppc  = Number(product.pieces_per_carton || 0);
+    const _ppb  = piecesPerBox(product);                       // carton_box: pcs per inner box
+    const _ppbt = Number(product.pieces_per_box || 0);         // crate: pcs per tray
+    const _bw   = Number(product.bag_weight || 0);
+
+    const lCtn   = _ppc  ? `Carton (${_ppc} pcs)`    : 'Carton';
+    const lInner = _ppb  ? `Inner Box (${_ppb} pcs)`  : 'Inner Box';
+    const lTray  = _ppbt ? `Tray (${_ppbt} pcs)`      : 'Tray';
+    const lDoz   = _ppc  ? `Dozen (${_ppc} pcs)`      : 'Dozen';
+    const lBag   = _bw   ? `Bag (${_bw} kg)`           : 'Bag';
+
+    // Short label used in the collapsed cart row summary
     const collapsedUnitLabel = item.unit === 'carton' ? 'ctn'
-      : item.unit === 'crate'  ? 'crate'
-      : item.unit === 'dozen'  ? 'doz'
-      : item.unit === 'tray'   ? 'tray'
-      : item.unit === 'bag'    ? 'bag'
-      : item.unit === 'box'    ? 'box'
-      : item.unit === 'kg'     ? 'kg'
+      : item.unit === 'dozen'    ? 'doz'
+      : item.unit === 'tray'     ? 'tray'
+      : item.unit === 'bag'      ? 'bag'
+      : item.unit === 'box'      ? 'inner box'
+      : item.unit === 'kg'       ? 'kg'
       : 'pc';
 
     if (item.collapsed && !hasErr) {
@@ -270,36 +298,41 @@ export async function renderSell() {
       </tr>`;
     }
 
-    // Unit cell — dropdown where multiple units apply, static label otherwise
+    // Unit cell — dropdown per category with descriptive labels
     let unitCell;
     if (product.category === 'carton') {
+      // Stock tracked as pieces → sell by piece or full carton
       unitCell = `<select class="cart-unit-select" data-unit-index="${index}">
         <option value="piece"  ${item.unit === 'piece'  ? 'selected' : ''}>Piece</option>
-        <option value="carton" ${item.unit === 'carton' ? 'selected' : ''}>Carton</option>
+        <option value="carton" ${item.unit === 'carton' ? 'selected' : ''}>${escapeHtml(lCtn)}</option>
       </select>`;
     } else if (product.category === 'bag') {
+      // Stock tracked as kg → sell by loose kg or full bag
       unitCell = `<select class="cart-unit-select" data-unit-index="${index}">
         <option value="kg"  ${item.unit === 'kg'  ? 'selected' : ''}>kg</option>
-        <option value="bag" ${item.unit === 'bag' ? 'selected' : ''}>Bag</option>
+        <option value="bag" ${item.unit === 'bag' ? 'selected' : ''}>${escapeHtml(lBag)}</option>
       </select>`;
     } else if (product.category === 'carton_box') {
+      // Stock tracked as pieces → sell by piece, inner box, or full carton
       unitCell = `<select class="cart-unit-select" data-unit-index="${index}">
         <option value="piece"  ${item.unit === 'piece'  ? 'selected' : ''}>Piece</option>
-        <option value="box"    ${item.unit === 'box'    ? 'selected' : ''}>Box</option>
-        <option value="carton" ${item.unit === 'carton' ? 'selected' : ''}>Carton</option>
+        <option value="box"    ${item.unit === 'box'    ? 'selected' : ''}>${escapeHtml(lInner)}</option>
+        <option value="carton" ${item.unit === 'carton' ? 'selected' : ''}>${escapeHtml(lCtn)}</option>
       </select>`;
     } else if (product.category === 'crate') {
+      // Stock tracked as pieces → sell by piece or tray
       unitCell = `<select class="cart-unit-select" data-unit-index="${index}">
         <option value="piece" ${item.unit === 'piece' ? 'selected' : ''}>Piece</option>
-        <option value="tray"  ${item.unit === 'tray'  ? 'selected' : ''}>Tray</option>
-        <option value="crate" ${item.unit === 'crate' ? 'selected' : ''}>Crate</option>
+        <option value="tray"  ${item.unit === 'tray'  ? 'selected' : ''}>${escapeHtml(lTray)}</option>
       </select>`;
     } else if (product.category === 'dozen') {
+      // Stock tracked as pieces → sell by piece or dozen
       unitCell = `<select class="cart-unit-select" data-unit-index="${index}">
         <option value="piece"  ${item.unit === 'piece'  ? 'selected' : ''}>Piece</option>
-        <option value="dozen"  ${item.unit === 'dozen'  ? 'selected' : ''}>Dozen</option>
+        <option value="dozen"  ${item.unit === 'dozen'  ? 'selected' : ''}>${escapeHtml(lDoz)}</option>
       </select>`;
     } else {
+      // pieces / packet — single unit only
       unitCell = `<span class="cart-unit-label">pc</span>`;
     }
 
@@ -307,18 +340,19 @@ export async function renderSell() {
       <td class="cart-col-product">
         <strong>${escapeHtml(product.name)}</strong>
         <small>${escapeHtml(sub)}</small>
-        ${oversell ? `<span class="cart-stock-error">Only ${escapeHtml(availableDisplay)} available</span>` : ''}
+        ${oversell ? `<span class="cart-stock-error">Max ${escapeHtml(String(maxQtyV))} ${escapeHtml(item.unit)} available</span>` : ''}
         ${!oversell && invalidQty ? '<span class="cart-stock-error">Enter a valid quantity</span>' : ''}
       </td>
       <td class="cart-col-qty">
         <input class="cart-qty${hasErr ? ' input-error' : ''}" data-qty-index="${index}"
-          type="number" min="${minQty}" step="${stepQty}" value="${escapeHtml(String(item.qty))}"
+          type="number" min="${minQty}" step="${stepQty}" max="${maxQty}" value="${escapeHtml(String(item.qty))}"
           aria-label="Quantity">
       </td>
       <td class="cart-col-unit">${unitCell}</td>
       <td class="cart-col-price">
         <input type="number" class="cart-price-input" data-price-index="${index}"
           min="0" step="0.01" value="${escapeHtml(String(unitPrice))}" aria-label="Sell price">
+        <small class="price-unit-hint">/${item.unit === 'carton' ? 'ctn' : item.unit === 'dozen' ? 'doz' : item.unit === 'tray' ? 'tray' : item.unit === 'bag' ? 'bag' : item.unit === 'box' ? 'box' : item.unit}</small>
       </td>
       <td class="cart-col-total">${fmtKES(total)}</td>
       <td class="cart-col-remove">
@@ -380,7 +414,7 @@ export async function renderSell() {
       !cart.length ||
       clientRequired ||
       cart.some((item) => oversellFor(item) || !Number.isFinite(item.qty) ||
-        item.qty < (item.unit === 'kg' ? 0.5 : 1));
+        item.qty < minQtyFor(item));
   }
 
   // ── event wiring ───────────────────────────────────────────────────────────
@@ -476,18 +510,50 @@ export async function renderSell() {
       return;
     }
 
-    // Qty edit
+    // Qty edit — targeted update (no full re-render) to preserve focus while typing
     const qtyInput = e.target.closest('[data-qty-index]');
     if (!qtyInput) return;
     const index = Number(qtyInput.dataset.qtyIndex);
-    cart[index].qty = Number(qtyInput.value) || 0;
-    const cursor = qtyInput.selectionStart;
-    renderCart();
-    const replacement = tbody.querySelector(`[data-qty-index="${index}"]`);
-    if (replacement) {
-      replacement.focus();
-      if (cursor !== null) replacement.setSelectionRange(cursor, cursor);
+    const parsed = parseFloat(qtyInput.value);
+    cart[index].qty = Number.isFinite(parsed) ? parsed : 0;
+
+    const item = cart[index];
+    const row  = tbody.querySelector(`tr[data-cart-index="${index}"]`);
+    if (row) {
+      // Update line total cell
+      const totalCell = row.querySelector('.cart-col-total');
+      if (totalCell) totalCell.textContent = fmtKES(item.qty * priceFor(item));
+
+      // Update error state
+      const oversell   = oversellFor(item);
+      const invalidQty = !Number.isFinite(item.qty) || item.qty < minQtyFor(item);
+      const hasErr     = oversell || invalidQty;
+      row.classList.toggle('cart-row-error', hasErr);
+      qtyInput.classList.toggle('input-error', hasErr);
+
+      // Update/remove the error hint text below product name
+      const productCell = row.querySelector('.cart-col-product');
+      let errSpan = productCell?.querySelector('.cart-stock-error');
+      if (hasErr) {
+        if (!errSpan) {
+          errSpan = document.createElement('span');
+          errSpan.className = 'cart-stock-error';
+          productCell.appendChild(errSpan);
+        }
+        if (oversell) {
+          const avail   = Math.max(availableFor(item), 0);
+          const maxV    = maxQtyFor(item.unit, avail, item.product);
+          errSpan.textContent = `Max ${maxV} ${item.unit} available`;
+        } else {
+          errSpan.textContent = 'Enter a valid quantity';
+        }
+      } else if (errSpan) {
+        errSpan.remove();
+      }
     }
+
+    document.getElementById('cart-total').textContent = fmtKES(totalForCart());
+    renderCheckoutState();
   });
 
   // Unit dropdown change
@@ -504,17 +570,17 @@ export async function renderSell() {
       const bw   = Number(item.product.bag_weight || 0);
       // Convert current qty to base stock unit (pieces or kg)
       let base = item.qty;
-      if (item.unit === 'carton' || item.unit === 'crate' || item.unit === 'dozen') base = item.qty * ppc;
+      if (item.unit === 'carton' || item.unit === 'dozen') base = item.qty * ppc;
       else if (item.unit === 'box')  base = item.qty * ppb;
       else if (item.unit === 'bag')  base = item.qty * bw;
       else if (item.unit === 'tray') base = item.qty * ppbt;
       // Convert base to the new unit
-      item.qty = (newUnit === 'carton' || newUnit === 'crate' || newUnit === 'dozen') && ppc
-               ? Math.max(1, Math.round(base / ppc))
-               : newUnit === 'box'  && ppb  ? Math.max(1, Math.round(base / ppb))
-               : newUnit === 'bag'  && bw   ? Math.max(1, Math.round(base / bw))
-               : newUnit === 'tray' && ppbt ? Math.max(1, Math.round(base / ppbt))
-               : newUnit === 'kg'           ? Math.max(0.5, base)
+      item.qty = (newUnit === 'carton' || newUnit === 'dozen') && ppc
+               ? Math.max(0.5, Math.round(base / ppc * 2) / 2)
+               : newUnit === 'box'  && ppb  ? Math.max(0.5, Math.round(base / ppb * 2) / 2)
+               : newUnit === 'bag'  && bw   ? Math.max(0.5, Math.round(base / bw * 2) / 2)
+               : newUnit === 'tray' && ppbt ? Math.max(0.5, Math.round(base / ppbt * 2) / 2)
+               : newUnit === 'kg'           ? Math.max(0.001, base)
                : Math.max(1, Math.round(base));
       item.unit = newUnit;
       item.price = defaultPrice(item.product, newUnit);
@@ -547,7 +613,7 @@ export async function renderSell() {
     const button = e.currentTarget;
     if (!cart.length || cart.some((item) =>
       oversellFor(item) || !Number.isFinite(item.qty) ||
-      item.qty < (item.unit === 'kg' ? 0.5 : 1))) {
+      item.qty < minQtyFor(item))) {
       showToast('Review the cart quantities before saving', 'error');
       return;
     }
@@ -566,7 +632,7 @@ export async function renderSell() {
       const ppb  = piecesPerBox(item.product);
       const ppbt = Number(item.product.pieces_per_box || 0); // pieces per tray
       const bw   = Number(item.product.bag_weight || 0);
-      const unitCost = (item.unit === 'carton' || item.unit === 'crate' || item.unit === 'dozen')
+      const unitCost = (item.unit === 'carton' || item.unit === 'dozen')
                      ? cp * ppc
                      : item.unit === 'bag'  ? cp * bw
                      : item.unit === 'box'  ? cp * ppb
