@@ -64,7 +64,8 @@ function maxQtyFor(unit, avail, product) {
 
 // Units of stock_qty consumed by this cart item
 function stockUsed(item) {
-  const { product, unit, qty } = item;
+  const { product, unit } = item;
+  const qty = item.qty ?? 0;
   if (unit === 'carton' || unit === 'dozen')
     return qty * Number(product.pieces_per_carton || 0);
   if (unit === 'bag')  return qty * Number(product.bag_weight || 0);
@@ -180,7 +181,7 @@ export async function renderSell() {
   // ── helpers ────────────────────────────────────────────────────────────────
 
   function totalForCart() {
-    return cart.reduce((sum, item) => sum + item.qty * priceFor(item), 0);
+    return cart.reduce((sum, item) => sum + (item.qty ?? 0) * priceFor(item), 0);
   }
 
   function availableFor(item) {
@@ -245,7 +246,7 @@ export async function renderSell() {
   function cartRowHtml(item, index) {
     const product = item.product;
     const unitPrice = priceFor(item);
-    const total = item.qty * unitPrice;
+    const total = (item.qty ?? 0) * unitPrice;
     const oversell = oversellFor(item);
     const availableRaw = Math.max(availableFor(item), 0);
     const ppc = Number(product.pieces_per_carton || 0);
@@ -258,7 +259,8 @@ export async function renderSell() {
     const stepQty  = item.unit === 'kg' ? 'any' : item.unit === 'piece' ? '1' : '0.5';
     const maxQtyV  = maxQtyFor(item.unit, availableRaw, product);
     const maxQty   = String(maxQtyV);
-    const invalidQty = !Number.isFinite(item.qty) || item.qty < minQtyV;
+    // null = blank (waiting for input) — show no error, just keep save disabled
+    const invalidQty = item.qty !== null && item.qty < minQtyV;
     const hasErr = oversell || invalidQty;
 
     const sub = productSize(product) || (product.category === 'carton' ? 'Carton' : product.category === 'bag' ? 'Bag' : product.category === 'carton_box' ? 'Carton+Box' : product.category === 'crate' ? 'Crate' : product.category === 'dozen' ? 'Dozen' : 'Pieces');
@@ -345,7 +347,7 @@ export async function renderSell() {
       </td>
       <td class="cart-col-qty">
         <input class="cart-qty${hasErr ? ' input-error' : ''}" data-qty-index="${index}"
-          type="number" min="${minQty}" step="${stepQty}" max="${maxQty}" value="${escapeHtml(String(item.qty))}"
+          type="number" min="${minQty}" step="${stepQty}" max="${maxQty}" value="${item.qty === null ? '' : escapeHtml(String(item.qty))}"
           aria-label="Quantity">
       </td>
       <td class="cart-col-unit">${unitCell}</td>
@@ -413,8 +415,7 @@ export async function renderSell() {
     document.getElementById('save-sale').disabled =
       !cart.length ||
       clientRequired ||
-      cart.some((item) => oversellFor(item) || !Number.isFinite(item.qty) ||
-        item.qty < minQtyFor(item));
+      cart.some((item) => oversellFor(item) || item.qty === null || item.qty < minQtyFor(item));
   }
 
   // ── event wiring ───────────────────────────────────────────────────────────
@@ -480,14 +481,14 @@ export async function renderSell() {
     const existing = cart.find((i) => i.product.id === product.id);
     let activeItem;
     if (existing) {
-      existing.qty += product.category === 'bag' ? 0.5 : 1;
+      // Already in cart — just expand it and focus its qty field
       activeItem = existing;
     } else {
       const initUnit = product.category === 'bag' ? 'kg' : 'piece';
       activeItem = {
         product,
-        qty: initUnit === 'kg' ? 0.5 : 1,
-        unit: initUnit,
+        qty:   null,   // blank — cashier types the quantity
+        unit:  initUnit,
         price: defaultPrice(product, initUnit),
         collapsed: false,
       };
@@ -495,6 +496,9 @@ export async function renderSell() {
     }
     cart.forEach((item) => { item.collapsed = item !== activeItem; });
     renderCart();
+    // Focus qty field after render so cashier can type immediately
+    const idx = cart.indexOf(activeItem);
+    tbody.querySelector(`[data-qty-index="${idx}"]`)?.focus();
   });
 
   tbody.addEventListener('input', (e) => {
@@ -515,18 +519,19 @@ export async function renderSell() {
     if (!qtyInput) return;
     const index = Number(qtyInput.dataset.qtyIndex);
     const parsed = parseFloat(qtyInput.value);
-    cart[index].qty = Number.isFinite(parsed) ? parsed : 0;
+    cart[index].qty = qtyInput.value === '' ? null
+      : Number.isFinite(parsed) ? parsed : 0;
 
     const item = cart[index];
     const row  = tbody.querySelector(`tr[data-cart-index="${index}"]`);
     if (row) {
       // Update line total cell
       const totalCell = row.querySelector('.cart-col-total');
-      if (totalCell) totalCell.textContent = fmtKES(item.qty * priceFor(item));
+      if (totalCell) totalCell.textContent = fmtKES((item.qty ?? 0) * priceFor(item));
 
       // Update error state
       const oversell   = oversellFor(item);
-      const invalidQty = !Number.isFinite(item.qty) || item.qty < minQtyFor(item);
+      const invalidQty = item.qty !== null && item.qty < minQtyFor(item);
       const hasErr     = oversell || invalidQty;
       row.classList.toggle('cart-row-error', hasErr);
       qtyInput.classList.toggle('input-error', hasErr);
@@ -564,28 +569,16 @@ export async function renderSell() {
     const item = cart[index];
     const newUnit = unitSel.value;
     if (item.unit !== newUnit) {
-      const ppc  = Number(item.product.pieces_per_carton || 0);
-      const ppb  = piecesPerBox(item.product);
-      const ppbt = Number(item.product.pieces_per_box || 0); // pieces per tray
-      const bw   = Number(item.product.bag_weight || 0);
-      // Convert current qty to base stock unit (pieces or kg)
-      let base = item.qty;
-      if (item.unit === 'carton' || item.unit === 'dozen') base = item.qty * ppc;
-      else if (item.unit === 'box')  base = item.qty * ppb;
-      else if (item.unit === 'bag')  base = item.qty * bw;
-      else if (item.unit === 'tray') base = item.qty * ppbt;
-      // Convert base to the new unit
-      item.qty = (newUnit === 'carton' || newUnit === 'dozen') && ppc
-               ? Math.max(0.5, Math.round(base / ppc * 2) / 2)
-               : newUnit === 'box'  && ppb  ? Math.max(0.5, Math.round(base / ppb * 2) / 2)
-               : newUnit === 'bag'  && bw   ? Math.max(0.5, Math.round(base / bw * 2) / 2)
-               : newUnit === 'tray' && ppbt ? Math.max(0.5, Math.round(base / ppbt * 2) / 2)
-               : newUnit === 'kg'           ? Math.max(0.001, base)
-               : Math.max(1, Math.round(base));
-      item.unit = newUnit;
+      item.qty   = null; // clear qty so cashier enters amount in the new unit
+      item.unit  = newUnit;
       item.price = defaultPrice(item.product, newUnit);
     }
     renderCart();
+    // Focus qty field so cashier can type immediately after switching unit
+    tbody.querySelector(`[data-unit-index="${index}"]`)
+      ?.closest('tr')
+      ?.querySelector(`[data-qty-index="${index}"]`)
+      ?.focus();
   });
 
   // Remove button
@@ -612,8 +605,7 @@ export async function renderSell() {
   document.getElementById('save-sale').addEventListener('click', async (e) => {
     const button = e.currentTarget;
     if (!cart.length || cart.some((item) =>
-      oversellFor(item) || !Number.isFinite(item.qty) ||
-      item.qty < minQtyFor(item))) {
+      oversellFor(item) || item.qty === null || item.qty < minQtyFor(item))) {
       showToast('Review the cart quantities before saving', 'error');
       return;
     }
@@ -681,7 +673,7 @@ export async function renderSell() {
         : ['carton', 'carton_box', 'crate', 'dozen'].includes(item.product.category) ? item.unit
         : 'piece',
       unit_price: priceFor(item),
-      line_total: item.qty * priceFor(item),
+      line_total: (item.qty ?? 0) * priceFor(item),
     }));
     const balance = Math.max(total - paidCash - paidMpesa, 0);
 
